@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# git
+alias gs='git status'
+alias gm='git merge --no-ff'
+alias gmf='git merge --ff-only'
+alias glist='for ref in $(git for-each-ref --sort=-committerdate --format="%(refname)" refs/heads/ refs/remotes ); do git log -n1 $ref --pretty=format:"%Cgreen%cr%Creset %C(yellow)%d%Creset %C(bold blue)<%an>%Creset%n" | cat ; done | awk '"'! a["'$0'"]++'"
+alias ga='git commit --amend --no-edit;'
+alias gap='git commit --amend --no-edit; git push -f origin HEAD --no-verify'
+alias gp='git push origin HEAD'
+alias gcontrib='git shortlog -s -n'
+
+# ls
+alias l="ls -lF ${colorflag}"
+alias la='ls -la'
+
+# cd
+alias cdh='cd ~/'
+alias cddrop='cd ~/Dropbox'
+alias cddev='cd ~/dev'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+alias d="cd ~/Dropbox"
+alias dl="cd ~/Downloads"
+alias c='cd ~/code'
+
+# docker
+alias dm='docker-machine'
+
+# Other util
+alias his='history | grep $1'
+alias grep='grep --color=auto'
+alias dockerips='docker inspect -f "{{.Name}} - {{.NetworkSettings.IPAddress }}" $(docker ps -aq)'
+alias journal='cwd=$(pwd) && cd ~/Dropbox/Private/journal && mkdir -p $(date "+%Y") && cd $(date "+%Y") && mkdir -p $(date "+%m") && $(date "+%m") && nvim $(date "+%d-%m-%Y").md && cd $cwd'
+alias n="nvim ."
+alias path='echo -e ${PATH//:/\\n}'
+
+# IP addresses
+alias ip="dig +short myip.opendns.com @resolver1.opendns.com"
+alias localip="ipconfig getifaddr en0"
+alias ips="ifconfig -a | grep -o 'inet6\? \(addr:\)\?\s\?\(\(\([0-9]\+\.\)\{3\}[0-9]\+\)\|[a-fA-F0-9:]\+\)' | awk '{ sub(/inet6? (addr:)? ?/, \"\"); print }'"

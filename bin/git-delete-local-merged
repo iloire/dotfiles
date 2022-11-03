@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# Delete all local branches that have been merged into HEAD. Stolen from
+# our favorite @tekkub:
+#
+#   https://plus.google.com/115587336092124934674/posts/dXsagsvLakJ
+
+
+if [ -z "$*" ]; then echo "Please provide branch name"; fi
+echo $1
+git branch -d `git branch --merged | grep -v '^*' | grep -v '$1' | tr -d '\n'`

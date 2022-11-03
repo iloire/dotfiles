@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+awslogin() { saml2aws login && eval $(saml2aws script) }
+

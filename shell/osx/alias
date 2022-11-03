@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+alias tu='top -o cpu' #by cpu
+alias tm='top -o vsize' #by mem
+
+# Hide/show all desktop icons (useful when presenting)
+alias hidedesktop="defaults write com.apple.finder CreateDesktop -bool false && killall Finder"
+alias showdesktop="defaults write com.apple.finder CreateDesktop -bool true && killall Finder"
+
+alias screenshotshadowoff="defaults write com.apple.screencapture disable-shadow -bool true;killall SystemUIServer"
+alias screenshotshadowon="defaults write com.apple.screencapture disable-shadow -bool false;killall SystemUIServer"
+
+alias qmake=/usr/local/Cellar/qt/5.10.0/bin/qmake

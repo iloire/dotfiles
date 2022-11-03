@@ -1,0 +1,4 @@
+#!/bin/zsh
+find $HOME/Downloads -type f -mtime +1 -exec rm {} \;
+#date >> /Users/ivan/downloads-crontab.txt
+#echo "$HOME/Downloads/*" >> /Users/ivan/downloads-crontab.txt

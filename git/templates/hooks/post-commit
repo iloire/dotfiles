@@ -1,0 +1,3 @@
+#!/bin/sh
+#echo awesome!
+#afplay ~/myconfig/git/happykids.wav > /dev/null 2>&1 &

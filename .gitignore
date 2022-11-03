@@ -1,0 +1,5 @@
+.DS_Store
+private-env
+local-machine-only
+.idea/
+*.swp
