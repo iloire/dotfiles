@@ -24,9 +24,9 @@ if [[ -f "$LOCAL_SETTINGS" ]]; then
    source $LOCAL_SETTINGS
 fi
 
-source $SHELL_DIR/path
 source $SHELL_DIR/alias
 source $SHELL_DIR/functions
+source $SHELL_DIR/path
 
 # macOS or Linux
 if [[ "$(uname)" == "Darwin" ]]; then

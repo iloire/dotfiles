@@ -1,0 +1,1 @@
+setlocal indentLine_enabled=0
