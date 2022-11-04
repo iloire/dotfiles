@@ -34,6 +34,7 @@ alias his='history | grep $1'
 alias grep='grep --color=auto'
 alias dockerips='docker inspect -f "{{.Name}} - {{.NetworkSettings.IPAddress }}" $(docker ps -aq)'
 alias journal='cwd=$(pwd) && cd ~/Dropbox/Private/journal && mkdir -p $(date "+%Y") && cd $(date "+%Y") && mkdir -p $(date "+%m") && $(date "+%m") && nvim $(date "+%d-%m-%Y").md && cd $cwd'
+alias j=journal
 alias n="nvim ."
 alias path='echo -e ${PATH//:/\\n}'
 
