@@ -1,5 +1,5 @@
 [init]
-    templatedir = ~/myconfig/git/templates
+    templatedir = ~/dotfiles/git/templates
 [user]
     name = ivan l.
     email = (none)
