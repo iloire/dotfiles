@@ -1,47 +1,50 @@
 vim.cmd("colorscheme gruvbox")
 
-vim.g.mapleader = " "
+global = vim.g
+options = vim.opt
 
-vim.opt.guicursor="n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50,a:blinkwait700-blinkoff400-blinkon250-Cursor/lCursor,sm:block-blinkwait175-blinkoff150-blinkon175"
+global.mapleader = " "
 
-vim.opt.nu = true
-vim.opt.relativenumber = true
+options.guicursor="n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50,a:blinkwait700-blinkoff400-blinkon250-Cursor/lCursor,sm:block-blinkwait175-blinkoff150-blinkon175"
 
-vim.opt.errorbells = false
+options.nu = true
+options.relativenumber = true
 
-vim.opt.tabstop = 4
-vim.opt.autoindent = true
-vim.opt.softtabstop = 4
-vim.opt.shiftwidth = 4
-vim.opt.expandtab = true
-vim.opt.ignorecase = true
-vim.opt.mouse = "a"                             -- allow the mouse to be used in neovim
-vim.opt.showtabline = 2                         -- always show tabs
-vim.opt.smartindent = true
-vim.opt.list = true
-vim.opt.wrap = false
+options.errorbells = false
 
-vim.opt.swapfile = false
-vim.opt.backup = false
+options.tabstop = 4
+options.autoindent = true
+options.softtabstop = 4
+options.shiftwidth = 4
+options.expandtab = true
+options.ignorecase = true
+options.mouse = "a"                             -- allow the mouse to be used in neovim
+options.showtabline = 2                         -- always show tabs
+options.smartindent = true
+options.list = true
+options.wrap = false
 
-vim.opt.hlsearch = false
-vim.opt.incsearch = true
+options.swapfile = false
+options.backup = false
 
-vim.opt.termguicolors = true
+options.hlsearch = false
+options.incsearch = true
 
-vim.opt.scrolloff = 15
-vim.opt.signcolumn = "yes"
-vim.opt.isfname:append("@-@")
+options.termguicolors = true
+
+options.scrolloff = 15
+options.signcolumn = "yes"
+options.isfname:append("@-@")
 
 -- Give more space for displaying messages.
-vim.opt.cmdheight = 1
+options.cmdheight = 1
 
 -- Having longer updatetime (default is 4000 ms = 4 s) leads to noticeable
 -- delays and poor user experience.
-vim.opt.updatetime = 50
+options.updatetime = 50
 
 -- Don't pass messages to |ins-completion-menu|.
-vim.opt.shortmess:append("c")
+options.shortmess:append("c")
 
-vim.opt.colorcolumn = "80"
+options.colorcolumn = "80"
 
