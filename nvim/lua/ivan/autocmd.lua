@@ -40,9 +40,8 @@ autocmd({"BufEnter"}, {
     group = MyGroup,
     pattern = "*/journal/**.md",
     callback = function()
-        time = os.date("# %d-%b-%Y (%a)")
-        vim.cmd('echo "journal entry"')
         if vim.fn.getline(1) == "" then
+            time = os.date("# %d-%b-%Y (%a)")
             vim.api.nvim_set_current_line(time)
         end
     end
