@@ -2,7 +2,7 @@
 
 ## Screenshots
 
-![Screenshot of my nvim prompt](https://raw.githubusercontent.com/iloire/dotfiles/main/screenshots/nvim.png)
+![Screenshot of my nvim prompt](https://raw.githubusercontent.com/iloire/dotfiles/main/screenshots/nvim-iterm.png)
 
 ## Credits / inspiration
 
