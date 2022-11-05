@@ -15,15 +15,6 @@ fi
 export GOPATH=$HOME/code/gocode
 export HOMEBREW_NO_ANALYTICS=1
 
-# PRIVATE ENV SETTINGS (THIS FILE SHOULD BE GIT IGNORED)
-source $SHELL_DIR/private-env
-
-# LOCAL MACHINE ONLY
-LOCAL_SETTINGS=$SHELL_DIR/local-machine-only
-if [[ -f "$LOCAL_SETTINGS" ]]; then
-   source $LOCAL_SETTINGS
-fi
-
 source $SHELL_DIR/alias
 source $SHELL_DIR/functions
 source $SHELL_DIR/path
