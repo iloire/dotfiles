@@ -30,24 +30,24 @@ local vi_mode_colors = {
 }
 
 local c = {
-    vim_mode = {
-        provider = {
-            name = "vi_mode",
-            opts = {
-                show_mode_name = true,
-            },
-        },
-        hl = function()
-            return {
-                fg = require("feline.providers.vi_mode").get_mode_color(),
-                bg = "darkblue",
-                style = "bold",
-                name = "NeovimModeHLColor",
-            }
-        end,
-        left_sep = "block",
-        right_sep = "block",
-    },
+    -- vim_mode = {
+    --     provider = {
+    --         name = "vi_mode",
+    --         opts = {
+    --             show_mode_name = true,
+    --         },
+    --     },
+    --     hl = function()
+    --         return {
+    --             fg = require("feline.providers.vi_mode").get_mode_color(),
+    --             bg = "darkblue",
+    --             style = "bold",
+    --             name = "NeovimModeHLColor",
+    --         }
+    --     end,
+    --     left_sep = "block",
+    --     right_sep = "block",
+    -- },
     gitBranch = {
         provider = "git_branch",
         hl = {
@@ -178,13 +178,13 @@ local c = {
         left_sep = "block",
         right_sep = "block",
     },
-    scroll_bar = {
-        provider = "scroll_bar",
-        hl = {
-            fg = "yellow",
-            style = "bold",
-        },
-    },
+    -- scroll_bar = {
+    --     provider = "scroll_bar",
+    --     hl = {
+    --         fg = "yellow",
+    --         style = "bold",
+    --     },
+    -- },
 }
 
 local left = {
