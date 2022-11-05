@@ -1,1 +1,1 @@
-setlocal indentLine_enabled=0
+let b:indentLine_enabled = 0
