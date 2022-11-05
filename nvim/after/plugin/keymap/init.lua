@@ -2,7 +2,6 @@ local Remap = require("ivan.keymap")
 local nnoremap = Remap.nnoremap
 local vnoremap = Remap.vnoremap
 local inoremap = Remap.inoremap
-local xnoremap = Remap.xnoremap
 local nmap = Remap.nmap
 
 -- next greatest remap ever : asbjornHaland
@@ -25,9 +24,13 @@ nnoremap("K", "<C-u>")
 inoremap("jk", "<ESC>")
 inoremap("jf", "<ESC>")
 
-nnoremap(";", "<C-w>h")
-nnoremap("'", "<C-w>l")
+nnoremap("<Tab>", "<C-w>w")
 nnoremap("_", "<C-w>w")
+
+-- Visual --
+-- Stay in indent mode
+vnoremap("<", "<gv", opts)
+vnoremap( ">", ">gv", opts)
 
 -- nvim tree toggle
 nnoremap("<leader>e", ":NvimTreeToggle<CR>")
