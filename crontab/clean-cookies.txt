@@ -1,1 +1,1 @@
- 0 * * * * /usr/local/opt/python/libexec/bin/python $HOME/dotfiles/bin/clean-cookies.py --clean
+ 0 20 * * 1 /usr/local/opt/python/libexec/bin/python $HOME/dotfiles/bin/clean-cookies.py --clean
