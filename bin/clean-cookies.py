@@ -25,7 +25,6 @@ for index, row in enumerate(rows):
     host = row[0]
     if (host not in white_listed_lines):
         if (len(sys.argv)> 1 and sys.argv[1] == '--clean'):
-            # print(f"removing cookie for {host}")
             c.execute("DELETE FROM cookies where host_key='" + host + "'")
         else:
             print(f"dry run: skipping removing cookie for {host}")
