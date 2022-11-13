@@ -22,4 +22,5 @@ require("nvim-tree").setup({
     filters = {
         dotfiles = false,
     },
+    remove_keymaps = {"<Tab>"}
 })
