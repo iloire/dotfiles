@@ -58,4 +58,6 @@ return require("packer").startup(function() -- Packer can manage itself
     -- language specific
     use("simrat39/rust-tools.nvim")
     use("ellisonleao/glow.nvim") -- markdown
+
+    use("windwp/nvim-autopairs")
 end)
