@@ -7,6 +7,7 @@ require("ivan.autocmd")
 
 require("luasnip/loaders/from_vscode").lazy_load()
 require("ivan.snippets.all")
+require("ivan.snippets.javascript")
 
 require('nvim_comment').setup()
 require("mason").setup()
