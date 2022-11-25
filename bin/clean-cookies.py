@@ -3,6 +3,7 @@
 import sqlite3 as db
 import os
 import sys
+from sys import platform
 
 home_dir = os.path.expanduser('~')
 whitelist_dir = f'{home_dir}/cookies-whitelist.txt'
@@ -10,8 +11,10 @@ whitelist_dir = f'{home_dir}/cookies-whitelist.txt'
 if not os.path.exists(whitelist_dir):
     print(f'no whitelist file found on {whitelist_dir}')
     quit()
-
-db_name = f'{home_dir}/Library/Application Support/Google/Chrome/Default/Cookies'
+if platform == 'linux' or platform == 'linux2':
+    db_name = f'{home_dir}/.config/google-chrome/Default/Cookies'
+elif platform == 'darwin':
+    db_name = f'{home_dir}/Library/Application Support/Google/Chrome/Default/Cookies'
 
 with open(whitelist_dir) as f:
     white_listed_lines = f.read().splitlines()
