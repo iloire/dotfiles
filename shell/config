@@ -24,14 +24,13 @@ if [[ "$(uname)" == "Darwin" ]]; then
   source $SHELL_DIR/osx/path
   source $SHELL_DIR/osx/alias
   source $SHELL_DIR/osx/functions
+  source $SHELL_DIR/osx/config
 else
   source $SHELL_DIR/linux/path
   source $SHELL_DIR/linux/alias
   source $SHELL_DIR/linux/functions
+  source $SHELL_DIR/linux/config
 fi
-
-export JAVA8_HOME=$(/usr/libexec/java_home -v 1.8)
-export JAVA_HOME=$JAVA8_HOME
 
 export NVM_DIR="$HOME/.nvm"
 #[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
