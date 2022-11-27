@@ -29,6 +29,7 @@ alias h='cd ~/'
 
 # docker
 alias dm='docker-machine'
+alias up='docker-compose up'
 
 # Other util
 alias his='history | grep $1'
