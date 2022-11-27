@@ -12,10 +12,10 @@ options.relativenumber = true
 
 options.errorbells = false
 
-options.tabstop = 4
 options.autoindent = true
-options.softtabstop = 4
-options.shiftwidth = 4
+options.tabstop = 2
+options.softtabstop = 2
+options.shiftwidth = 2
 options.expandtab = true
 options.ignorecase = true
 options.mouse = "a"                             -- allow the mouse to be used in neovim
