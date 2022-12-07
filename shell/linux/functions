@@ -2,3 +2,6 @@
 
 awslogin() { saml2aws login && eval $(saml2aws script) }
 
+cleancache() {
+  find ~/.cache/ -type f -atime +365 -delete
+}
