@@ -173,15 +173,15 @@ scrolling:
 font:
   # Normal (roman) font face
   normal:
-  # Font family
-  #
-  # Default:
-  #   - (macOS) Menlo
-  #   - (Linux/BSD) monospace
-  #   - (Windows) Consolas
+    # Font family
+    #
+    # Default:
+    #   - (macOS) Menlo
+    #   - (Linux/BSD) monospace
+    #   - (Windows) Consolas
     family: "JetBrainsMono Nerd Font Mono"
 
-  # The `style` can be specified to pick a specific face.
+    # The `style` can be specified to pick a specific face.
     style: Regular
 
   # Bold font face
@@ -464,7 +464,7 @@ cursor:
 #   - (Linux/BSD) user login shell
 #   - (Windows) powershell
 shell:
-  program: /usr/local/bin/fish
+  program: /usr/bin/fish
 #   # args:
 #   #   - --command
 #   #   - tmux new-session
@@ -882,4 +882,3 @@ key_bindings:
 
 # Print all received window events.
 #print_events: false
-
