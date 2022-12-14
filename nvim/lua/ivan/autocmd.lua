@@ -12,7 +12,7 @@ autocmd({"BufWritePre"}, {
 
 autocmd({"BufWritePre"}, {
     group = MyGroup,
-    pattern = "*",
+    pattern = "*.js, *.jsx, *.tsx, *.ts",
     command = "Neoformat prettier",
 })
 
