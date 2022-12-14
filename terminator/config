@@ -1,5 +1,7 @@
 [global_config]
 [keybindings]
+  go_left = <Alt>j
+  go_right = <Alt>k
 [profiles]
   [[default]]
     background_color = "#002b36"
