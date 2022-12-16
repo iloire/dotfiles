@@ -14,12 +14,32 @@
     use_system_font = False
 [layouts]
   [[default]]
-    [[[window0]]]
+    [[[child0]]]
       type = Window
-      size = 1200, 800
       parent = ""
+      order = 0
+      position = 496:205
+      maximised = False
+      fullscreen = False
+      size = 2395, 1137
+      last_active_term = 09791c0a-586f-4d5f-9fb2-f39fb09f15a7
+      last_active_window = True
     [[[child1]]]
+      type = HPaned
+      parent = child0
+      order = 0
+      position = 1496
+      ratio = 0.6259414225941422
+    [[[terminal2]]]
       type = Terminal
-      parent = window0
+      parent = child1
+      order = 0
       profile = default
+      uuid = 09791c0a-586f-4d5f-9fb2-f39fb09f15a7
+    [[[terminal3]]]
+      type = Terminal
+      parent = child1
+      order = 1
+      profile = default
+      uuid = 0b9e16e2-29df-4c19-aed6-8002911cc586
 [plugins]
