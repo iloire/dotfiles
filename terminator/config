@@ -1,7 +1,11 @@
 [global_config]
 [keybindings]
-  go_left = <Alt>j
-  go_right = <Alt>k
+  go_next = <Shift><Alt>k
+  go_prev = <Shift><Alt>j
+  go_up = <Alt>k
+  go_down = <Alt>j
+  go_left = <Alt>h
+  go_right = <Alt>l
 [profiles]
   [[default]]
     background_color = "#002b36"
