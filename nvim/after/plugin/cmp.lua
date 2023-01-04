@@ -33,6 +33,7 @@ cmp.setup({
         { name = 'emoji' },
         { name = 'luasnip' },
         { name = 'buffer' },
+        { name = 'path' }
     })
 })
 
