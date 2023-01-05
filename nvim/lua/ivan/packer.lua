@@ -16,6 +16,7 @@ return require("packer").startup(function() -- Packer can manage itself
 
     use("nvim-lua/plenary.nvim") -- required by telescope
     use("nvim-telescope/telescope.nvim")
+    use("theprimeagen/harpoon")
 
     -- parsing library for source code
     use("nvim-treesitter/nvim-treesitter", {
