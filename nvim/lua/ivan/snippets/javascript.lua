@@ -13,7 +13,7 @@ ls.add_snippets("javascript", {
     t("console.error('"), i(1, "log"), t("')")
 	}),
 	s("log", {
-    t("console.log('"), i(1, "log"), t("')")
+    t("console.log("), i(1, ""), t(")")
 	}),
 	s("ternary javascript", {
 		i(1, "cond"), t(" ? "), i(2, "then"), t(" : "), i(3, "else")
