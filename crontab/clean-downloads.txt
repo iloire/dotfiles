@@ -1,3 +1,0 @@
-# Clean files from the downloads folder every X days (ignores directories)
-0 * * * * find $HOME/Downloads/ -mtime +4 -type f -delete -depth 1
-
