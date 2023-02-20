@@ -1,5 +1,6 @@
 [init]
     templatedir = ~/dotfiles/git/templates
+	defaultBranch = main
 [user]
 	name = ivan l.
 	email = 317868+iloire@users.noreply.github.com
