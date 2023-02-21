@@ -10,9 +10,9 @@ autocmd({"BufWritePre"}, {
     command = "%s/\\s\\+$//e",
 })
 
-autocmd({"BufWritePre"}, {
+autocmd({"BufWritePre", "InsertLeave"}, {
     group = MyGroup,
-    pattern = "*.js, *.jsx, *.tsx, *.ts",
+    pattern = {"*.js", "*.jsx", "*.tsx", "*.ts"},
     command = "Neoformat prettier",
 })
 
