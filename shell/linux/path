@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 
 addToPath $HOME/apps
+addToPath $HOME/.local/bin
