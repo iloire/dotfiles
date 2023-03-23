@@ -22,7 +22,18 @@ return require("packer").startup(function() -- Packer can manage itself
     use("nvim-treesitter/nvim-treesitter", {
         run = ":TSUpdate"
     })
-    use("glepnir/lspsaga.nvim")
+    use({
+      "glepnir/lspsaga.nvim",
+      branch = "main",
+      config = function()
+          require("lspsaga").setup({})
+      end,
+      requires = {
+          {"nvim-tree/nvim-web-devicons"},
+          --Please make sure you install markdown and markdown_inline parser
+          {"nvim-treesitter/nvim-treesitter"}
+      }
+    })
     use("gruvbox-community/gruvbox")
     use("sbdchd/neoformat")
 

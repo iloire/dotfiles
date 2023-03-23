@@ -134,6 +134,11 @@ _G.packer_plugins = {
     path = "/home/ivan/.local/share/nvim/site/pack/packer/start/gruvbox",
     url = "https://github.com/gruvbox-community/gruvbox"
   },
+  harpoon = {
+    loaded = true,
+    path = "/home/ivan/.local/share/nvim/site/pack/packer/start/harpoon",
+    url = "https://github.com/theprimeagen/harpoon"
+  },
   indentLine = {
     loaded = true,
     path = "/home/ivan/.local/share/nvim/site/pack/packer/start/indentLine",
