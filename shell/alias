@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+run_nvim() {
+  if [ $# -eq 0 ]; then
+    nvim .
+  else
+    nvim $1
+  fi
+}
+
 # git
 alias gs='git status'
 alias gm='git merge --no-ff'
@@ -37,7 +45,7 @@ alias grep='grep --color=auto'
 alias dockerips='docker inspect -f "{{.Name}} - {{.NetworkSettings.IPAddress }}" $(docker ps -aq)'
 alias journal='cwd=$(pwd) && cd ~/Dropbox/Private/journal && mkdir -p $(date "+%Y") && cd $(date "+%Y") && mkdir -p $(date "+%m") && $(date "+%m") && nvim $(date "+%d-%m-%Y").md && cd $cwd'
 alias j=journal
-alias n="nvim ."
+alias n=run_nvim
 alias path='echo -e ${PATH//:/\\n}'
 alias e=exit
 
