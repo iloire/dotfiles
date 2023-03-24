@@ -22,9 +22,15 @@ plugins=(
     last-working-dir
 )
 
+export SHELL_DIR=~/dotfiles/shell
+
+LOCAL_OVERRIDES=$SHELL_DIR/local-overrides
+if test -f "$LOCAL_OVERRIDES"; then
+  source $LOCAL_OVERRIDES
+fi
+
 export FZF_BASE=/usr/local/bin/fzf
 source $ZSH/oh-my-zsh.sh
 
-export SHELL_DIR=~/dotfiles/shell
 source $SHELL_DIR/config
 
