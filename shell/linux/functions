@@ -5,13 +5,17 @@ awslogin() { saml2aws login && eval $(saml2aws script) }
 backup() {
   echo backing up linux...
 
-  tar -cvpzf ~/backup/code.tar.gz \
+  tar -cpzf ~/backup/code.tar.gz \
   --exclude=.git \
   --exclude=node_modules \
   --exclude=userdata \
+  --exclude=coe-project \
+  --exclude=data \
+  --exclude=data3 \
+  --exclude=ammo.js \
   ~/code
 
-  tar -cvpzf ~/backup/dconf.tar.gz \
+  tar -cpzf ~/backup/dconf.tar.gz \
   ~/.config/dconf
 }
 
