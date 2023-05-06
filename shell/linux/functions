@@ -6,6 +6,8 @@ backup() {
   echo backing up linux...
 
   tar -cpzf ~/backup/code.tar.gz \
+  --exclude-ignore=.tarignore \
+  --exclude-ignore=.gitignore \
   --exclude=.git \
   --exclude=node_modules \
   --exclude=userdata \
