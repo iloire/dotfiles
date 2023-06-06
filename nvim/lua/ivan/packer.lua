@@ -67,7 +67,7 @@ return require("packer").startup(function() -- Packer can manage itself
     use("folke/which-key.nvim")
 
     -- A snazzy 💅 buffer line (with tabpage integration) for Neovim built using lua.
-    use {"akinsho/bufferline.nvim", tag = "v2.*", requires = "kyazdani42/nvim-web-devicons"}
+    use {"akinsho/bufferline.nvim", tag = "*", requires = "kyazdani42/nvim-web-devicons"}
 
     -- A minimal, stylish and customizable statusline / winbar for Neovim written in Lua
     use("feline-nvim/feline.nvim")
