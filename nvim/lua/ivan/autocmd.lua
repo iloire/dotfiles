@@ -35,14 +35,8 @@ autocmd({"BufWritePre"}, {
 
 autocmd({"BufWritePre"}, {
     group = MyGroup,
-    pattern = {"*.jsx", "*.tsx", "*.ts"},
+    pattern = {"*.js", "*.jsx", "*.tsx", "*.ts"},
     command = "Neoformat prettier",
-})
-
-autocmd({"BufWritePre"}, {
-    group = MyGroup,
-    pattern = {"*.js"},
-    command = "Neoformat",
 })
 
 autocmd("BufEnter", {
