@@ -14,9 +14,6 @@
 --
 -- Please see https://github.com/nvim-tree/nvim-tree.lua/wiki/Migrating-To-on_attach for assistance in migrating.
 --
-require("nvim-tree").setup({
-  on_attach = on_attach,
-})
 
 local function on_attach(bufnr)
   local api = require('nvim-tree.api')
@@ -95,6 +92,8 @@ local function on_attach(bufnr)
   vim.keymap.set('n', '<Tab>', '', { buffer = bufnr })
   vim.keymap.del('n', '<Tab>', { buffer = bufnr })
 
+  vim.keymap.del('n', 'F',     {buffer = bufnr})
+  vim.keymap.del('n', 'f',    {buffer = bufnr})
 
   -- Mappings migrated from view.mappings.list
   --
@@ -102,3 +101,10 @@ local function on_attach(bufnr)
   vim.keymap.set('n', 'u', api.tree.change_root_to_parent, opts('Up'))
 
 end
+
+require("nvim-tree").setup({
+  on_attach = on_attach,
+  update_focused_file = {
+    enable = true,
+  },
+})

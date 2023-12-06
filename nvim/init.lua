@@ -4,6 +4,7 @@ require("ivan.telescope")
 require("ivan.feline")
 require("ivan.bufferline")
 require("ivan.autocmd")
+require("ivan.nvimtree")
 
 require("luasnip/loaders/from_vscode").lazy_load()
 require("ivan.snippets.all")
