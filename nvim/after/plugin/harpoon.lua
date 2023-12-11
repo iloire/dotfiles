@@ -4,7 +4,7 @@ local Remap = require("ivan.keymap")
 local nnoremap = Remap.nnoremap
 
 nnoremap("<leader>a", mark.add_file)
-nnoremap("<C-e>", ui.toggle_quick_menu)
+nnoremap("<leader>r", ui.toggle_quick_menu)
 
 nnoremap("<C-t>", function() ui.nav_file(2) end)
 nnoremap("<C-n>", function() ui.nav_file(3) end)
