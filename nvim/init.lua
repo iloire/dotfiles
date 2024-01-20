@@ -12,7 +12,6 @@ require("ivan.snippets.javascript")
 
 require('nvim_comment').setup()
 require("mason").setup()
-require'lspconfig'.pyright.setup{}
 
 -- Set up lspconfig.
 local capabilities = require('cmp_nvim_lsp').default_capabilities(vim.lsp.protocol.make_client_capabilities())
