@@ -54,6 +54,7 @@ return require("packer").startup(function() -- Packer can manage itself
     })
 
     use("L3MON4D3/LuaSnip")
+    use("benfowler/telescope-luasnip.nvim")
     use("rafamadriz/friendly-snippets")
     use("saadparwaiz1/cmp_luasnip")
 
