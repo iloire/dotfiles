@@ -36,13 +36,22 @@ c = conn.cursor()
 c.execute("SELECT host_key FROM cookies")
 
 rows = c.fetchall()
+
+run_clean = (len(sys.argv)> 1 and sys.argv[1] == '--clean')
+
+print(f"Number cookies: {len(rows)}")
+print(f"runclean: {run_clean}")
+
 for index, row in enumerate(rows):
     host = row[0]
     if (host not in white_listed_lines):
-        if (len(sys.argv)> 1 and sys.argv[1] == '--clean'):
+        if (run_clean):
             c.execute("DELETE FROM cookies where host_key='" + host + "'")
         else:
             print(f"dry run: skipping removing cookie for {host}")
+    else: # white listed
+        if not (run_clean):
+            print(f"white listed: {host}")
 
 conn.commit()
 c.execute("vacuum")
