@@ -34,10 +34,20 @@ return require("packer").startup(function() -- Packer can manage itself
           {"nvim-treesitter/nvim-treesitter"}
       }
     })
+
     use("gruvbox-community/gruvbox")
     use("sbdchd/neoformat")
 
-    use("neovim/nvim-lspconfig")
+    -- A collection of configurations for Neovim’s built-in LSP
+    -- https://blog.inkdrop.app/my-neovim-setup-for-react-typescript-tailwind-css-etc-in-2022-a7405862c9a4
+    local status, nvim_lsp = pcall(require, "lspconfig")
+    if (not status) then return end
+    -- TypeScript
+    nvim_lsp.tsserver.setup {
+      on_attach = on_attach,
+      filetypes = { "typescript", "typescriptreact", "typescript.tsx" },
+      cmd = { "typescript-language-server", "--stdio" }
+    }
 
     -- Autocompletion framework
     use("hrsh7th/nvim-cmp")
