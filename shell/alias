@@ -2,7 +2,7 @@
 
 run_nvim() {
   if [ $# -eq 0 ]; then
-    nvim .
+    nvim
   else
     nvim $1
   fi
