@@ -38,6 +38,11 @@ return require("packer").startup(function() -- Packer can manage itself
     use("gruvbox-community/gruvbox")
     use("sbdchd/neoformat")
 
+    -- easily install and manage LSP servers, DAP servers, linters, and formatters.
+    use("williamboman/mason.nvim")
+    use("williamboman/mason-lspconfig.nvim")
+    use("neovim/nvim-lspconfig")
+
     -- A collection of configurations for Neovim’s built-in LSP
     -- https://blog.inkdrop.app/my-neovim-setup-for-react-typescript-tailwind-css-etc-in-2022-a7405862c9a4
     local status, nvim_lsp = pcall(require, "lspconfig")
@@ -82,7 +87,6 @@ return require("packer").startup(function() -- Packer can manage itself
 
     -- A minimal, stylish and customizable statusline / winbar for Neovim written in Lua
     use("feline-nvim/feline.nvim")
-    use("williamboman/mason.nvim") -- easily install and manage LSP servers, DAP servers, linters, and formatters.
 
     -- git
     use("lewis6991/gitsigns.nvim")
