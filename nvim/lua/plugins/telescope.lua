@@ -95,6 +95,7 @@ return {
         },
       }
       opts.extensions = {
+        fzf = { fuzzy = false },
         file_browser = {
           theme = "dropdown",
           -- disables netrw and use telescope-file-browser in its place
