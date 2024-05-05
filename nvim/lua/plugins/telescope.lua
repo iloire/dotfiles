@@ -10,15 +10,6 @@ return {
     },
     keys = {
       {
-        "<leader>fP",
-        function()
-          require("telescope.builtin").find_files({
-            cwd = require("lazy.core.config").options.root,
-          })
-        end,
-        desc = "Find Plugin File",
-      },
-      {
         "ff",
         function()
           local builtin = require("telescope.builtin")
@@ -40,7 +31,7 @@ return {
         desc = "Search for a string in your current working directory and get results live as you type, respects .gitignore",
       },
       {
-        ";e",
+        "fd",
         function()
           local builtin = require("telescope.builtin")
           builtin.diagnostics()
@@ -48,7 +39,7 @@ return {
         desc = "Lists Diagnostics for all open buffers or a specific buffer",
       },
       {
-        "sf",
+        "fb",
         function()
           local telescope = require("telescope")
 
