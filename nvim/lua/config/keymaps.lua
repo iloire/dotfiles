@@ -3,7 +3,6 @@
 -- Add any additional keymaps here
 
 local keymap = vim.keymap
-local opts = { noremap = true, silent = true }
 
 keymap.set("n", "U", "<C-R>") -- redo
 keymap.set("n", "<leader>w", ":w<CR>")
