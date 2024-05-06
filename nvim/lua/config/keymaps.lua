@@ -8,3 +8,6 @@ local opts = { noremap = true, silent = true }
 keymap.set("n", "U", "<C-R>") -- redo
 keymap.set("n", "<leader>w", ":w<CR>")
 keymap.set("n", "<leader>q", ":q<CR>")
+
+keymap.set("n", "<C-j>", "<C-d><CR>")
+keymap.set("n", "<C-k>", "<C-u><CR>")
