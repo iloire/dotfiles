@@ -41,7 +41,6 @@ return {
     config = function(_, opts)
       local telescope = require("telescope")
       local actions = require("telescope.actions")
-      local fb_actions = require("telescope").extensions.file_browser.actions
 
       opts.defaults = vim.tbl_deep_extend("force", opts.defaults, {
         wrap_results = true,
@@ -72,8 +71,6 @@ return {
             -- your custom insert mode mappings
             ["n"] = {
               -- your custom normal mode mappings
-              ["N"] = fb_actions.create,
-              ["h"] = fb_actions.goto_parent_dir,
               ["/"] = function()
                 vim.cmd("startinsert")
               end,
