@@ -10,3 +10,4 @@ keymap.set("n", "<leader>q", ":q<CR>")
 
 keymap.set("n", "<C-j>", "<C-d><CR>")
 keymap.set("n", "<C-k>", "<C-u><CR>")
+keymap.set("n", "qq", ":q<CR>")
