@@ -23,7 +23,7 @@ return {
         "fg",
         function()
           local builtin = require("telescope.builtin")
-          builtin.grep_string({
+          builtin.live_grep({
             additional_args = { "--hidden" },
           })
         end,
