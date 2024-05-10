@@ -20,6 +20,6 @@ df -H | grep -vE '^Filesystem|tmpfs|cdrom' | awk '{ print $5 " " $1 }' | while r
 	if [ $usep -ge $ALERT ]; then
 		msg="Running out of space \"$partition ($usep%)\" on $(hostname) as on $(date)"
 		echo "$msg" >>$LOGFILENAME
-		send-ses.sh "Alert: Almost out of disk space $usep% (ALERT AT $ALERT%)" "$msg"
+		$HOME/dotfiles/bin/send-ses.sh "Alert: Almost out of disk space $usep% (ALERT AT $ALERT%)" "$msg"
 	fi
 done
