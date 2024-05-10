@@ -464,7 +464,7 @@ cursor:
 #   - (Linux/BSD) user login shell
 #   - (Windows) powershell
 shell:
-  program: /opt/homebrew/bin/fish
+  program: /opt/homebrew/bin/zsh
 #   # args:
 #   #   - --command
 #   #   - tmux new-session
