@@ -35,6 +35,10 @@ if platform == 'linux' or platform == 'linux2':
 elif platform == 'darwin':
     db_name = f'{home_dir}/Library/Application Support/Google/Chrome/Default/Cookies'
 
+if not os.path.exists(db_name):
+    print(f'database file not found on {db_name}')
+    quit()
+
 with open(whitelist_dir) as f:
     white_listed_lines = f.read().splitlines()
 
