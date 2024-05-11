@@ -14,4 +14,4 @@ REGION=us-east-1
 SUBJECT=$1
 BODY=$2
 
-aws --profile email ses send-email --from $EMAIL --to $EMAIL --region $REGION --text "$BODY" --subject "$SUBJECT"
+aws --profile email ses send-email --from $EMAIL --to $EMAIL --region $REGION --text "$BODY" --subject "$SUBJECT" >>$HOME/.ses.log
