@@ -16,7 +16,12 @@ import sqlite3 as db
 import os
 import sys
 import datetime
+import re
 from sys import platform
+
+home_dir = os.path.expanduser('~')
+run_clean = (len(sys.argv)> 1 and sys.argv[1] == '--clean')
+whitelist_dir = f'{home_dir}/cookies-whitelist.txt'
 
 def append_to_log(log_file, deleted_rows):
     current_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -24,50 +29,60 @@ def append_to_log(log_file, deleted_rows):
     with open(log_file, "a") as file:
         file.write(log_line)
 
-home_dir = os.path.expanduser('~')
-whitelist_dir = f'{home_dir}/cookies-whitelist.txt'
+def filter_strings(string_list, whitelist):
+    filtered_list = []
+    removed_list = []
+    for string in string_list:
+        if any(re.match(pattern, string) for pattern in whitelist):
+            filtered_list.append(string)
+        else:
+            removed_list.append(string)
+    return filtered_list, removed_list
+
+def get_cookie_host_list(db_path):
+    conn = db.connect(db_path)
+    c = conn.cursor()
+    c.execute("SELECT host_key FROM cookies")
+    cookie_host_list = [row[0] for row in c.fetchall()]
+    conn.close()
+    return cookie_host_list
+def get_db_path():
+
+    if platform == 'linux' or platform == 'linux2':
+        return f'{home_dir}/.config/google-chrome/Default/Cookies'
+    elif platform == 'darwin':
+        return f'{home_dir}/Library/Application Support/Google/Chrome/Default/Cookies'
+
+def remove_cookies_hosts(cookie_hosts_to_remove):
+    conn = db.connect(db_path)
+    c = conn.cursor()
+    for host in cookie_hosts_to_remove:
+      c.execute("DELETE FROM cookies where host_key='" + host + "'")
+
+    conn.commit()
+    c.execute("vacuum")
+    conn.close()
 
 if not os.path.exists(whitelist_dir):
     print(f'no whitelist file found on {whitelist_dir}')
     quit()
 
-if platform == 'linux' or platform == 'linux2':
-    db_name = f'{home_dir}/.config/google-chrome/Default/Cookies'
-elif platform == 'darwin':
-    db_name = f'{home_dir}/Library/Application Support/Google/Chrome/Default/Cookies'
-
-if not os.path.exists(db_name):
-    print(f'database file not found on {db_name}')
-    quit()
-
 with open(whitelist_dir) as f:
     white_listed_lines = f.read().splitlines()
 
-conn = db.connect(db_name)
-c = conn.cursor()
-c.execute("SELECT host_key FROM cookies")
+db_path = get_db_path()
+if not os.path.exists(db_path):
+    print(f'database file not found on {db_path}')
+    quit()
 
-rows = c.fetchall()
-
-run_clean = (len(sys.argv)> 1 and sys.argv[1] == '--clean')
+cookie_host_list = get_cookie_host_list(db_path)    
 
 deleted_rows = []
 
-for index, row in enumerate(rows):
-    host = row[0]
-    if (host not in white_listed_lines):
-        if (run_clean):
-            c.execute("DELETE FROM cookies where host_key='" + host + "'")
-            deleted_rows.append(host)
-        else:
-            print(f"dry run: skipping removing cookie for {host}")
-    else: # white listed
-        if not (run_clean):
-            print(f"white listed: {host}")
+cookies_to_keep, cookie_hosts_to_remove = filter_strings(cookie_host_list, white_listed_lines)
 
-log_file = f'{home_dir}/cookies-whitelist-log.log'
-append_to_log(log_file, deleted_rows)
-
-conn.commit()
-c.execute("vacuum")
-conn.close()
+if (run_clean):
+    remove_cookies_hosts(cookie_hosts_to_remove)
+else:
+    print(f"--- dry run: skipping removing cookie for hosts")
+    print(cookie_hosts_to_remove)
