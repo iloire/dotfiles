@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Cleans non white-listed cookies on Chrome
 
@@ -49,9 +50,6 @@ c.execute("SELECT host_key FROM cookies")
 rows = c.fetchall()
 
 run_clean = (len(sys.argv)> 1 and sys.argv[1] == '--clean')
-
-# print(f"Number cookies: {len(rows)}")
-# print(f"runclean: {run_clean}")
 
 deleted_rows = []
 
