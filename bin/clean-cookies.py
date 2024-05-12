@@ -21,7 +21,7 @@ from sys import platform
 
 home_dir = os.path.expanduser('~')
 run_clean = (len(sys.argv)> 1 and sys.argv[1] == '--clean')
-whitelist_dir = f'{home_dir}/cookies-whitelist.txt'
+whitelist_dir = f'{home_dir}/myconfig/cookies-whitelist.txt'
 
 def append_to_log(log_file, deleted_rows):
     current_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
