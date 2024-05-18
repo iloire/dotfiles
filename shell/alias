@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 run_nvim() {
-  if [ $# -eq 0 ]; then
-    nvim
-  else
-    nvim $1
-  fi
+	if [ $# -eq 0 ]; then
+		nvim .
+	else
+		nvim $1
+	fi
 }
 
 # git
