@@ -46,6 +46,7 @@ def get_cookie_host_list(db_path):
     cookie_host_list = [row[0] for row in c.fetchall()]
     conn.close()
     return cookie_host_list
+
 def get_db_path():
 
     if platform == 'linux' or platform == 'linux2':
@@ -85,4 +86,9 @@ if (run_clean):
     remove_cookies_hosts(cookie_hosts_to_remove)
 else:
     print(f"--- dry run: skipping removing cookie for hosts")
+    print('--- Cookies to be removed:')
     print(cookie_hosts_to_remove)
+    # print('--- Whitelisted cookies:')
+    # print(cookies_to_keep)
+    # print('--- Cookies hosts:')
+    # print(cookie_host_list)
