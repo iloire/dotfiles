@@ -22,6 +22,7 @@ from sys import platform
 home_dir = os.path.expanduser('~')
 run_clean = (len(sys.argv)> 1 and sys.argv[1] == '--clean')
 whitelist_dir = f'{home_dir}/myconfig/cookies-whitelist.txt'
+log_file = f'{home_dir}/cookies-whitelist-log.log'
 
 def append_to_log(log_file, deleted_rows):
     current_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -78,17 +79,15 @@ if not os.path.exists(db_path):
 
 cookie_host_list = get_cookie_host_list(db_path)    
 
-deleted_rows = []
-
 cookies_to_keep, cookie_hosts_to_remove = filter_strings(cookie_host_list, white_listed_lines)
-
 if (run_clean):
     remove_cookies_hosts(cookie_hosts_to_remove)
+    append_to_log(log_file, cookie_hosts_to_remove)
 else:
     print(f"--- dry run: skipping removing cookie for hosts")
     print('--- Cookies to be removed:')
     print(cookie_hosts_to_remove)
-    # print('--- Whitelisted cookies:')
-    # print(cookies_to_keep)
-    # print('--- Cookies hosts:')
-    # print(cookie_host_list)
+    print('--- Whitelisted cookies:')
+    print(cookies_to_keep)
+    print('--- Cookies hosts:')
+    print(cookie_host_list)
