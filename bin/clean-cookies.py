@@ -19,6 +19,9 @@ import datetime
 import re
 from sys import platform
 
+if os.getenv('EXECUTE_COOKIE_CLEANING') == 'false':
+    sys.exit(0)
+
 home_dir = os.path.expanduser('~')
 run_clean = (len(sys.argv)> 1 and sys.argv[1] == '--clean')
 whitelist_dir = f'{home_dir}/myconfig/cookies-whitelist.txt'
@@ -49,7 +52,6 @@ def get_cookie_host_list(db_path):
     return cookie_host_list
 
 def get_db_path():
-
     if platform == 'linux' or platform == 'linux2':
         return f'{home_dir}/.config/google-chrome/Default/Cookies'
     elif platform == 'darwin':
