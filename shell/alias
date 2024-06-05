@@ -48,6 +48,7 @@ alias j=journal
 alias n=run_nvim
 alias path='echo -e ${PATH//:/\\n}'
 alias e=exit
+alias mux=tmuxinator
 
 # IP addresses
 alias ip="dig +short myip.opendns.com @resolver1.opendns.com"
