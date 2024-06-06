@@ -1,0 +1,16 @@
+
+# ~/.tmuxinator/devil.yml
+
+name: devil
+root: ~/
+
+windows:
+  - devil_dev:
+      layout: main-horizontal
+      panes:
+      - editor:
+          - nvim ~/code/theflyingdevil.com/
+      - yarn:
+          - cd ~/code/theflyingdevil.com/
+          - nvm
+          - yarn start
