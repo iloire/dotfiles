@@ -21,6 +21,7 @@ alias gcontrib='git shortlog -s -n'
 # ls
 alias l="ls -lF ${colorflag}"
 alias la='ls -la'
+alias dun='list-space.sh' # easier to type
 
 # cd
 alias cdh='cd ~/'
