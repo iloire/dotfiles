@@ -1,0 +1,16 @@
+
+# ~/.tmuxinator/lanza3d.yml
+
+name: lanza3d
+root: ~/
+
+windows:
+  - devil_dev:
+      layout: main-horizontal
+      panes:
+      - editor:
+          - nvim ~/code/lanzarote3d/
+      - yarn:
+          - cd ~/code/lanzarote3d
+          - nvm
+          - yarn start
