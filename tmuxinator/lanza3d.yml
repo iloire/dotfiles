@@ -2,7 +2,7 @@
 # ~/.tmuxinator/lanza3d.yml
 
 name: lanza3d
-root: ~/
+root: ~/code/lanzarote3d/
 
 windows:
   - devil_dev:

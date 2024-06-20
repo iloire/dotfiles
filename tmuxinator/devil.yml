@@ -2,7 +2,7 @@
 # ~/.tmuxinator/devil.yml
 
 name: devil
-root: ~/
+root: ~/code/theflyingdevil
 
 windows:
   - devil_dev:
