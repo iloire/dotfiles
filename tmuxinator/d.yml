@@ -8,7 +8,8 @@ windows:
       layout: main-horizontal
       panes:
       - editor:
-          - nvim ~/code/theflyingdevil.com/
+          - cd ~/code/theflyingdevil.com/
+          - n .
       - yarn:
           - cd ~/code/theflyingdevil.com/
           - nvm
@@ -16,15 +17,23 @@ windows:
   - notes:
       panes:
       - editor:
-          - nvim ~/notes
+          - cd ~/notes
+          - n .
+  - code:
+      panes:
+      - console:
+          - cd ~/code
+          - ls 
   - dotfiles:
       panes:
       - editor:
-          - nvim ~/dotfiles
+          - cd ~/dotfiles
+          - n .
   - ansible:
       layout: main-horizontal
       panes:
       - editor:
-          - nvim ~/code/ansible-recipes/
+          - cd ~/code/ansible-recipes/
+          - n .
       - console:
           - echo ready
