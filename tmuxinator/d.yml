@@ -4,26 +4,16 @@ name: default
 root: ~/
 
 windows:
-  - devil_dev:
-      layout: main-horizontal
-      panes:
-      - editor:
-          - cd ~/code/theflyingdevil.com/
-          - n .
-      - yarn:
-          - cd ~/code/theflyingdevil.com/
-          - nvm
-          - yarn start
   - notes:
       panes:
       - editor:
           - cd ~/notes
+          - git pull
           - n .
-  - code:
+  - console:
       panes:
       - console:
-          - cd ~/code
-          - ls 
+          - cd ~/
   - dotfiles:
       panes:
       - editor:
