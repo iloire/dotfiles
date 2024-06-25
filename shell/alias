@@ -15,7 +15,7 @@ alias gmf='git merge --ff-only'
 alias glist='for ref in $(git for-each-ref --sort=-committerdate --format="%(refname)" refs/heads/ refs/remotes ); do git log -n1 $ref --pretty=format:"%Cgreen%cr%Creset %C(yellow)%d%Creset %C(bold blue)<%an>%Creset%n" | cat ; done | awk '"'! a["'$0'"]++'"
 alias ga='git commit --amend --no-edit;'
 alias gap='git commit --amend --no-edit; git push -f origin HEAD --no-verify'
-alias gp='git push origin HEAD'
+alias gp='git push origin HEAD && git push --tags'
 alias gcontrib='git shortlog -s -n'
 
 # ls
