@@ -1,0 +1,13 @@
+name: calma
+root: ~/code/lacalmaeduca.com/
+
+windows:
+  - devil_dev:
+      layout: main-horizontal
+      panes:
+      - editor:
+          - nvim ~/code/lacalmaeduca.com/www-site/
+      - yarn:
+          - cd ~/code/lacalmaeduca.com/www-site/
+          - nvm
+          - yarn dev
