@@ -8,3 +8,4 @@ addToPath $HOME/.rvm/bin
 addToPath $HOME/dotfiles/bin
 addToPath $HOME/.yarn/bin
 addToPath $HOME/.config/yarn/global/node_modules/.bin
+addToPath $HOME/miniconda3/bin
