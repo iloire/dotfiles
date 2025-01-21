@@ -5,20 +5,27 @@ root: ~/
 
 windows:
   - notes:
+      layout: main-horizontal
       panes:
       - editor:
           - cd ~/notes
-          - git pull
           - n .
+      - console:
+          - cd ~/notes
+          - git fetch
   - console:
       panes:
       - console:
           - cd ~/
   - dotfiles:
+      layout: main-horizontal
       panes:
       - editor:
           - cd ~/dotfiles
           - n .
+      - console:
+          - cd ~/dotfiles
+          - git fetch
   - ansible:
       layout: main-horizontal
       panes:
@@ -26,4 +33,5 @@ windows:
           - cd ~/code/ansible-recipes/
           - n .
       - console:
-          - echo ready
+          - cd ~/code/ansible-recipes/
+          - git fetch
