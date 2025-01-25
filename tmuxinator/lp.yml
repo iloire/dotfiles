@@ -1,0 +1,25 @@
+# /Users/ivan/.config/tmuxinator/lp.yml
+
+name: lanzaroteparagliding 
+root: ~/code/lanzaroteparagliding/
+
+windows:
+  - www-static:
+      layout: main-horizontal
+      panes:
+      - editor:
+          - cd ~/code/lanzaroteparagliding/www-static/
+          - n .
+      - run:
+          - cd ~/code/lanzaroteparagliding/www-static/
+          - nvm
+          - yarn start
+  - backend:
+      panes:
+      - editor:
+          - cd ~/code/lanzaroteparagliding/backend/src/
+          - n .
+      - run:
+          - cd ~/code/lanzaroteparagliding/backend/src/
+          - nvm
+          - yarn dev
