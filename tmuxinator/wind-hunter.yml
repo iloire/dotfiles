@@ -1,0 +1,16 @@
+
+# ~/.tmuxinator/wind-hunter.yml
+
+name: wind-hunter
+root: ~/code/wind-hunter/
+
+windows:
+  - devil_dev:
+      layout: main-horizontal
+      panes:
+      - editor:
+          - nvim ~/code/wind-hunter/
+      - yarn:
+          - cd ~/code/wind-hunter
+          - nvm
+          - yarn dev
