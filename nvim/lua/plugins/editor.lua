@@ -142,6 +142,7 @@ return {
         "shellcheck",
         "shfmt",
         "flake8",
+        "prettier",
       },
     },
   },
