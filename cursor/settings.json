@@ -1,0 +1,18 @@
+{
+  "window.commandCenter": 1,
+  "git.confirmSync": false,
+  "editor.tabSize": 2,
+  "git.autofetch": true,
+  "cursor.aipreview.enabled": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.ts": "always",
+    "source.organizeImports": "always",
+    "source.fixAll": "always",
+    "source.removeUnused.ts": "always",
+    "source.removeUnusedImports": "always",
+    "source.sortImports": "always"
+  },
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.fontWeight": "normal"
+}
