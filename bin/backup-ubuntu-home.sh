@@ -1,8 +1,11 @@
 #!/bin/bash
 
-# Backup script for home directory with selective exclusions, including dev-related dirs
+# Backup script for home directory plus system directories with selective exclusions
 
-echo "===== HOME DIRECTORY BACKUP SCRIPT ====="
+# Check if running with sudo/root privileges
+
+
+echo "===== SYSTEM AND HOME DIRECTORY BACKUP SCRIPT ====="
 echo "Starting backup process at $(date)"
 
 # Source directory (your home directory)
@@ -41,9 +44,10 @@ echo "  - Development-related directories (.git, node_modules, venv, .venv)"
 echo "  - Patterns from .gitignore files"
 echo "  - Patterns from .tarignore files (if present)"
 echo "  - All 'Cache' folders inside .config directory"
+echo "  - /etc and /root directories"
 
 # Create the tar.gz archive with exclusions
-tar -czvf "$BACKUP_FILE" \
+sudo tar -czvf "$BACKUP_FILE" \
     --exclude="*.bak" \
     --exclude="*.tmp" \
     --exclude=".git" \
@@ -67,6 +71,9 @@ tar -czvf "$BACKUP_FILE" \
     --exclude="$HOME/.code/*/release" \
     --exclude="$HOME/.code/*/cache" \
     --exclude="$HOME/.dbus" \
+    --exclude="$HOME/.docker" \
+    --exclude="$HOME/dotfiles" \
+    --exclude="$HOME/notes" \
     --exclude="$HOME/.googleearth" \
     --exclude="$HOME/.ICEauthority" \
     --exclude="$HOME/.local/lib" \
@@ -86,16 +93,23 @@ tar -czvf "$BACKUP_FILE" \
     --exclude="$HOME/.wine" \
     --exclude="$HOME/.vscode" \
     --exclude="$HOME/.Xauthority" \
+    --exclude="$HOME/VirtualBox VMs" \
+    --exclude="$HOME/vms" \
     --exclude="$HOME/*/Cache" \
     --exclude="$HOME/backup" \
     --exclude="$HOME/Downloads" \
+    --exclude="$HOME/Unity" \
     --exclude="$HOME/miniconda3" \
     --exclude="$HOME/snap" \
     --exclude="venv" \
     --exclude=".venv" \
+    --exclude="/etc/alternatives" \
+    --exclude="/etc/cache" \
+    --exclude="/etc/lvm/cache" \
+    --exclude="/etc/ssl/certs" \
     --exclude-ignore=".gitignore" \
     --exclude-ignore=".tarignore" \
-    "$SOURCE"
+    "$SOURCE" "/etc" "/root"
 
 # Check if tar was successful
 if [ $? -eq 0 ]; then
