@@ -48,6 +48,8 @@ echo "  - /etc and /root directories"
 
 # Create the tar.gz archive with exclusions
 sudo tar -czvf "$BACKUP_FILE" \
+    --exclude-ignore=".gitignore" \
+    --exclude-ignore=".tarignore" \
     --exclude="*.bak" \
     --exclude="*.tmp" \
     --exclude=".git" \
@@ -64,6 +66,7 @@ sudo tar -czvf "$BACKUP_FILE" \
     --exclude="$HOME/.config/*/CachedData" \
     --exclude="$HOME/.config/*/CacheStorage" \
     --exclude="$HOME/.config/*/cache" \
+    --exclude="$HOME/.config/balena-etcher" \
     --exclude="$HOME/.code/*/build" \
     --exclude="$HOME/.code/*/dist" \
     --exclude="$HOME/.code/*/node_modules" \
@@ -107,8 +110,6 @@ sudo tar -czvf "$BACKUP_FILE" \
     --exclude="/etc/cache" \
     --exclude="/etc/lvm/cache" \
     --exclude="/etc/ssl/certs" \
-    --exclude-ignore=".gitignore" \
-    --exclude-ignore=".tarignore" \
     "$SOURCE" "/etc" "/root"
 
 # Check if tar was successful
