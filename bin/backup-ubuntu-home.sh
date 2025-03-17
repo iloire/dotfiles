@@ -103,6 +103,7 @@ sudo tar -czvf "$BACKUP_FILE" \
     --exclude="$HOME/Downloads" \
     --exclude="$HOME/Unity" \
     --exclude="$HOME/miniconda3" \
+    --exclude="/root/miniconda3" \
     --exclude="$HOME/snap" \
     --exclude="venv" \
     --exclude=".venv" \
