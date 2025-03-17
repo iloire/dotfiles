@@ -24,7 +24,14 @@ fi
 # Temporary backup file name with date (e.g., home_backup_2025-03-16.tar.gz)
 DATE=$(date +%Y-%m-%d)
 BACKUP_FILE="$BACKUP_DIR/home_backup_$DATE.tar.gz"
+LOG_FILE="$BACKUP_DIR/home_backup_$DATE.log"
 echo "Backup will be saved as: $BACKUP_FILE"
+echo "Log will be saved as: $LOG_FILE"
+
+# Start logging
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "===== BACKUP LOG: $(date) =====" | tee -a "$LOG_FILE"
+echo "Source directory: $SOURCE" | tee -a "$LOG_FILE"
 
 # Start timer
 START_TIME=$(date +%s)
@@ -46,13 +53,16 @@ echo "  - Patterns from .tarignore files (if present)"
 echo "  - All 'Cache' folders inside .config directory"
 echo "  - /etc and /root directories"
 
+echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting tar archive creation..." | tee -a "$LOG_FILE"
+
 # Create the tar.gz archive with exclusions
 sudo tar -czvf "$BACKUP_FILE" \
-    --exclude-ignore=".gitignore" \
-    --exclude-ignore=".tarignore" \
     --exclude="*.bak" \
     --exclude="*.tmp" \
     --exclude=".git" \
+    --exclude="$HOME/.nv" \
+    --exclude="$HOME/.arduinoIDE" \
+    --exclude="$HOME/.arduino15" \
     --exclude="$HOME/.cache" \
     --exclude="$HOME/.cache/compizconfig-1" \
     --exclude="$HOME/.compiz" \
@@ -111,15 +121,16 @@ sudo tar -czvf "$BACKUP_FILE" \
     --exclude="/etc/cache" \
     --exclude="/etc/lvm/cache" \
     --exclude="/etc/ssl/certs" \
-    "$SOURCE" "/etc" "/root"
+    "$SOURCE" "/etc" "/root" 2>&1 | tee -a "$LOG_FILE"
 
 # Check if tar was successful
-if [ $? -eq 0 ]; then
+TAR_STATUS=${PIPESTATUS[0]}
+if [ $TAR_STATUS -eq 0 ]; then
     # Get file size
     BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-    echo "Archive created successfully: $BACKUP_FILE (Size: $BACKUP_SIZE)"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive created successfully: $BACKUP_FILE (Size: $BACKUP_SIZE)" | tee -a "$LOG_FILE"
 else
-    echo "ERROR: Failed to create archive!"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - ERROR: Failed to create archive! Exit code: $TAR_STATUS" | tee -a "$LOG_FILE"
     exit 1
 fi
 
@@ -128,7 +139,7 @@ END_TIME=$(date +%s)
 ELAPSED=$((END_TIME - START_TIME))
 MINUTES=$((ELAPSED / 60))
 SECONDS=$((ELAPSED % 60))
-echo "Archive creation took $MINUTES minutes and $SECONDS seconds"
+echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive creation took $MINUTES minutes and $SECONDS seconds" | tee -a "$LOG_FILE"
 
 # Check if enough parameters are provided for transfer (at least 3: user, host, path)
 if [ "$#" -ge 3 ]; then
@@ -136,37 +147,42 @@ if [ "$#" -ge 3 ]; then
     REMOTE_HOST="$2"
     REMOTE_PATH="$3"
 
-    echo "===== REMOTE TRANSFER ====="
-    echo "Transferring backup to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH..."
-    echo "Starting transfer at $(date)"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== REMOTE TRANSFER =====" | tee -a "$LOG_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring backup to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH..." | tee -a "$LOG_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting transfer at $(date)" | tee -a "$LOG_FILE"
     
     TRANSFER_START=$(date +%s)
-    scp -v "$BACKUP_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH"
+    scp -v "$BACKUP_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1 | tee -a "$LOG_FILE"
+    SCP_STATUS=${PIPESTATUS[0]}
 
-    if [ $? -eq 0 ]; then
+    if [ $SCP_STATUS -eq 0 ]; then
         TRANSFER_END=$(date +%s)
         TRANSFER_TIME=$((TRANSFER_END - TRANSFER_START))
         TRANSFER_MIN=$((TRANSFER_TIME / 60))
         TRANSFER_SEC=$((TRANSFER_TIME % 60))
         
-        echo "Backup transferred successfully to $REMOTE_HOST:$REMOTE_PATH"
-        echo "Transfer took $TRANSFER_MIN minutes and $TRANSFER_SEC seconds"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Backup transferred successfully to $REMOTE_HOST:$REMOTE_PATH" | tee -a "$LOG_FILE"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transfer took $TRANSFER_MIN minutes and $TRANSFER_SEC seconds" | tee -a "$LOG_FILE"
         
-        echo "Removing local backup file..."
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Removing local backup file..." | tee -a "$LOG_FILE"
         rm "$BACKUP_FILE"
-        echo "Local archive $BACKUP_FILE deleted"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Local archive $BACKUP_FILE deleted" | tee -a "$LOG_FILE"
+        
+        # Also transfer the log file
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring log file to remote host..." | tee -a "$LOG_FILE"
+        scp -v "$LOG_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1 | tee -a "$LOG_FILE"
     else
-        echo "ERROR: Transfer failed!"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - ERROR: Transfer failed! Exit code: $SCP_STATUS" | tee -a "$LOG_FILE"
         exit 1
     fi
 else
-    echo "No transfer requested or insufficient parameters. Backup stored in: $BACKUP_FILE"
-    echo "Usage for transfer: $0 <remote_user> <remote_host> <remote_path>"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - No transfer requested or insufficient parameters. Backup stored in: $BACKUP_FILE" | tee -a "$LOG_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Usage for transfer: $0 <remote_user> <remote_host> <remote_path>" | tee -a "$LOG_FILE"
 fi
 
-echo "===== BACKUP PROCESS COMPLETED ====="
-echo "Finished at: $(date)"
+echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== BACKUP PROCESS COMPLETED =====" | tee -a "$LOG_FILE"
+echo "$(date +"%Y-%m-%d %H:%M:%S") - Finished at: $(date)" | tee -a "$LOG_FILE"
 TOTAL_TIME=$(($(date +%s) - START_TIME))
 TOTAL_MIN=$((TOTAL_TIME / 60))
 TOTAL_SEC=$((TOTAL_TIME % 60))
-echo "Total execution time: $TOTAL_MIN minutes and $TOTAL_SEC seconds"
+echo "$(date +"%Y-%m-%d %H:%M:%S") - Total execution time: $TOTAL_MIN minutes and $TOTAL_SEC seconds" | tee -a "$LOG_FILE"
