@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Todoist
+Exec=/snap/bin/todoist
+Icon=todoist
+Terminal=false
+Comment=Todoist
+Categories=Office;Productivity;
+StartupNotify=true
