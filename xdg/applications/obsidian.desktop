@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=Obsidian
+Comment=Obsidian
+Exec=/home/ivan/apps/Obsidian.AppImage
+Icon=dialog-information
+Terminal=false
+Type=Application
+Categories=Utility;Application;
+MimeType=x-scheme-handler/obsidian;text/html;
