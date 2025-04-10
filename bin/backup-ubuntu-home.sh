@@ -2,11 +2,11 @@
 
 # Backup script for home directory plus system directories with selective exclusions
 
-# Check if running with sudo/root privileges
-
-
 echo "===== SYSTEM AND HOME DIRECTORY BACKUP SCRIPT ====="
 echo "Starting backup process at $(date)"
+
+SOURCE="$HOME"
+echo "Source directory: $SOURCE"
 
 # Initialize variables
 REMOTE_BACKUP=false
