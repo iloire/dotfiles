@@ -85,11 +85,11 @@ echo "Log will be saved as: $LOG_FILE"
 
 # Start logging
 exec > >(tee -a "$LOG_FILE") 2>&1
-echo "===== BACKUP LOG: $(date) =====" | tee -a "$LOG_FILE"
-echo "Source directory: $SOURCE" | tee -a "$LOG_FILE"
-echo "Backup directory: $BACKUP_DIR" | tee -a "$LOG_FILE"
+echo "===== BACKUP LOG: $(date) ====="
+echo "Source directory: $SOURCE"
+echo "Backup directory: $BACKUP_DIR"
 if [ "$REMOTE_BACKUP" = "true" ]; then
-    echo "Remote backup enabled: $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" | tee -a "$LOG_FILE"
+    echo "Remote backup enabled: $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH"
 fi
 
 # Start timer
@@ -112,7 +112,7 @@ echo "  - Patterns from .tarignore files (if present)"
 echo "  - All 'Cache' folders inside .config directory"
 echo "  - /etc and /root directories"
 
-echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting tar archive creation..." | tee -a "$LOG_FILE"
+echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting tar archive creation..."
 
 # Create the tar.gz archive with exclusions
 sudo tar -czvf "$BACKUP_FILE" \
@@ -180,16 +180,16 @@ sudo tar -czvf "$BACKUP_FILE" \
     --exclude="/etc/cache" \
     --exclude="/etc/lvm/cache" \
     --exclude="/etc/ssl/certs" \
-    "$SOURCE" "/etc" "/root" 2>&1 | tee -a "$LOG_FILE"
+    "$SOURCE" "/etc" 2>&1
 
 # Check if tar was successful
 TAR_STATUS=${PIPESTATUS[0]}
 if [ $TAR_STATUS -eq 0 ]; then
     # Get file size
     BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive created successfully: $BACKUP_FILE (Size: $BACKUP_SIZE)" | tee -a "$LOG_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive created successfully: $BACKUP_FILE (Size: $BACKUP_SIZE)"
 else
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - ERROR: Failed to create archive! Exit code: $TAR_STATUS" | tee -a "$LOG_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - ERROR: Failed to create archive! Exit code: $TAR_STATUS"
     exit 1
 fi
 
@@ -198,16 +198,16 @@ END_TIME=$(date +%s)
 ELAPSED=$((END_TIME - START_TIME))
 MINUTES=$((ELAPSED / 60))
 SECONDS=$((ELAPSED % 60))
-echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive creation took $MINUTES minutes and $SECONDS seconds" | tee -a "$LOG_FILE"
+echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive creation took $MINUTES minutes and $SECONDS seconds"
 
 # Check if remote backup is enabled
 if [ "$REMOTE_BACKUP" = "true" ]; then
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== REMOTE TRANSFER =====" | tee -a "$LOG_FILE"
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring backup to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH..." | tee -a "$LOG_FILE"
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting transfer at $(date)" | tee -a "$LOG_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== REMOTE TRANSFER ====="
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring backup to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH..."
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting transfer at $(date)"
     
     TRANSFER_START=$(date +%s)
-    scp -v "$BACKUP_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1 | tee -a "$LOG_FILE"
+    scp -v "$BACKUP_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1
     SCP_STATUS=${PIPESTATUS[0]}
 
     if [ $SCP_STATUS -eq 0 ]; then
@@ -216,28 +216,28 @@ if [ "$REMOTE_BACKUP" = "true" ]; then
         TRANSFER_MIN=$((TRANSFER_TIME / 60))
         TRANSFER_SEC=$((TRANSFER_TIME % 60))
         
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Backup transferred successfully to $REMOTE_HOST:$REMOTE_PATH" | tee -a "$LOG_FILE"
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transfer took $TRANSFER_MIN minutes and $TRANSFER_SEC seconds" | tee -a "$LOG_FILE"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Backup transferred successfully to $REMOTE_HOST:$REMOTE_PATH"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transfer took $TRANSFER_MIN minutes and $TRANSFER_SEC seconds"
         
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Removing local backup file..." | tee -a "$LOG_FILE"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Removing local backup file..."
         rm "$BACKUP_FILE"
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Local archive $BACKUP_FILE deleted" | tee -a "$LOG_FILE"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Local archive $BACKUP_FILE deleted"
         
         # Also transfer the log file
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring log file to remote host..." | tee -a "$LOG_FILE"
-        scp -v "$LOG_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1 | tee -a "$LOG_FILE"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring log file to remote host..."
+        scp -v "$LOG_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1
     else
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - ERROR: Transfer failed! Exit code: $SCP_STATUS" | tee -a "$LOG_FILE"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - ERROR: Transfer failed! Exit code: $SCP_STATUS"
         exit 1
     fi
 else
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - No remote backup requested. Backup stored in: $BACKUP_FILE" | tee -a "$LOG_FILE"
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - To enable remote backup use: $0 --backup-dir <backup_directory> --remote-backup <remote_user> <remote_host> <remote_path>" | tee -a "$LOG_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - No remote backup requested. Backup stored in: $BACKUP_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - To enable remote backup use: $0 --backup-dir <backup_directory> --remote-backup <remote_user> <remote_host> <remote_path>"
 fi
 
-echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== BACKUP PROCESS COMPLETED =====" | tee -a "$LOG_FILE"
-echo "$(date +"%Y-%m-%d %H:%M:%S") - Finished at: $(date)" | tee -a "$LOG_FILE"
+echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== BACKUP PROCESS COMPLETED ====="
+echo "$(date +"%Y-%m-%d %H:%M:%S") - Finished at: $(date)"
 TOTAL_TIME=$(($(date +%s) - START_TIME))
 TOTAL_MIN=$((TOTAL_TIME / 60))
 TOTAL_SEC=$((TOTAL_TIME % 60))
-echo "$(date +"%Y-%m-%d %H:%M:%S") - Total execution time: $TOTAL_MIN minutes and $TOTAL_SEC seconds" | tee -a "$LOG_FILE"
+echo "$(date +"%Y-%m-%d %H:%M:%S") - Total execution time: $TOTAL_MIN minutes and $TOTAL_SEC seconds"
