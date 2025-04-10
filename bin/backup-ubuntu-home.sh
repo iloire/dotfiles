@@ -8,12 +8,67 @@
 echo "===== SYSTEM AND HOME DIRECTORY BACKUP SCRIPT ====="
 echo "Starting backup process at $(date)"
 
-# Source directory (your home directory)
-SOURCE="$HOME"
-echo "Source directory: $SOURCE"
+# Initialize variables
+REMOTE_BACKUP=false
+REMOTE_USER=""
+REMOTE_HOST=""
+REMOTE_PATH=""
 
-# Define backup directory
-BACKUP_DIR="$HOME/backup"
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --backup-dir)
+            if [ -n "$2" ]; then
+                BACKUP_DIR="$2"
+                echo "Using BACKUP_DIR from command line argument: $BACKUP_DIR"
+                shift 2
+            else
+                echo "ERROR: --backup-dir requires a directory path"
+                exit 1
+            fi
+            ;;
+        --remote-backup)
+            REMOTE_BACKUP=true
+            shift
+            # Next three arguments should be user, host, path
+            if [ $# -lt 3 ]; then
+                echo "ERROR: --remote-backup requires three additional parameters: <remote_user> <remote_host> <remote_path>"
+                exit 1
+            fi
+            REMOTE_USER="$1"
+            REMOTE_HOST="$2"
+            REMOTE_PATH="$3"
+            shift 3
+            ;;
+        *)
+            # For backward compatibility, check if we have 3 positional args (user, host, path)
+            if [ $# -ge 3 ] && [ "$REMOTE_BACKUP" = "false" ]; then
+                REMOTE_BACKUP=true
+                REMOTE_USER="$1"
+                REMOTE_HOST="$2"
+                REMOTE_PATH="$3"
+                shift 3
+            else
+                echo "ERROR: Unknown parameter: $1"
+                echo "Usage: $0 [--backup-dir <backup_directory>] [--remote-backup <remote_user> <remote_host> <remote_path>]"
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+# Check if BACKUP_DIR is set from environment or command line
+if [ -z "$BACKUP_DIR" ]; then
+    if [ -n "$BACKUP_DIR_ENV" ]; then
+        BACKUP_DIR="$BACKUP_DIR_ENV"
+        echo "Using BACKUP_DIR from environment variable: $BACKUP_DIR"
+    else
+        echo "ERROR: BACKUP_DIR not specified"
+        echo "Please set the BACKUP_DIR environment variable or provide it as an argument:"
+        echo "Usage: $0 --backup-dir <backup_directory> [--remote-backup <remote_user> <remote_host> <remote_path>]"
+        exit 1
+    fi
+fi
 
 # Create backup directory if it doesn't exist
 if [ ! -d "$BACKUP_DIR" ]; then
@@ -32,6 +87,10 @@ echo "Log will be saved as: $LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "===== BACKUP LOG: $(date) =====" | tee -a "$LOG_FILE"
 echo "Source directory: $SOURCE" | tee -a "$LOG_FILE"
+echo "Backup directory: $BACKUP_DIR" | tee -a "$LOG_FILE"
+if [ "$REMOTE_BACKUP" = "true" ]; then
+    echo "Remote backup enabled: $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" | tee -a "$LOG_FILE"
+fi
 
 # Start timer
 START_TIME=$(date +%s)
@@ -141,12 +200,8 @@ MINUTES=$((ELAPSED / 60))
 SECONDS=$((ELAPSED % 60))
 echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive creation took $MINUTES minutes and $SECONDS seconds" | tee -a "$LOG_FILE"
 
-# Check if enough parameters are provided for transfer (at least 3: user, host, path)
-if [ "$#" -ge 3 ]; then
-    REMOTE_USER="$1"
-    REMOTE_HOST="$2"
-    REMOTE_PATH="$3"
-
+# Check if remote backup is enabled
+if [ "$REMOTE_BACKUP" = "true" ]; then
     echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== REMOTE TRANSFER =====" | tee -a "$LOG_FILE"
     echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring backup to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH..." | tee -a "$LOG_FILE"
     echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting transfer at $(date)" | tee -a "$LOG_FILE"
@@ -176,8 +231,8 @@ if [ "$#" -ge 3 ]; then
         exit 1
     fi
 else
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - No transfer requested or insufficient parameters. Backup stored in: $BACKUP_FILE" | tee -a "$LOG_FILE"
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Usage for transfer: $0 <remote_user> <remote_host> <remote_path>" | tee -a "$LOG_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - No remote backup requested. Backup stored in: $BACKUP_FILE" | tee -a "$LOG_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - To enable remote backup use: $0 --backup-dir <backup_directory> --remote-backup <remote_user> <remote_host> <remote_path>" | tee -a "$LOG_FILE"
 fi
 
 echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== BACKUP PROCESS COMPLETED =====" | tee -a "$LOG_FILE"
