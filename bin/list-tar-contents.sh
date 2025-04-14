@@ -3,6 +3,10 @@
 # Script to analyze tar archive contents and generate directory listing
 # Usage: list-tar-contents.sh <tar_file> <output_log_file>
 
+# Configuration variables
+TOP_DIRS_COUNT=50     # Number of top largest directories to display
+SIZE_THRESHOLD=1048576  # Size threshold for directory listing (1MB = 1048576 bytes)
+
 if [ $# -lt 2 ]; then
     echo "ERROR: Missing required parameters"
     echo "Usage: $0 <tar_file> <output_log_file> [source_dir]"
@@ -34,9 +38,6 @@ echo "Analyzing contents of archive file..."
 
 # Create a temporary directory for analysis
 TEMP_DIR=$(mktemp -d)
-
-echo "TOP-LEVEL DIRECTORIES AND FILES:" >> "$DIRS_LOG_FILE"
-echo "-------------------" >> "$DIRS_LOG_FILE"
 
 # Extract directory structure (without extracting files)
 # List all entries in the tar file and sort them
@@ -119,20 +120,26 @@ done
 # Sort the directories by size (largest first) for display
 sort -t, -k2 -nr "$TEMP_DIR/dir_sizes.csv" > "$TEMP_DIR/dir_sizes_sorted.csv"
 
-# Output all directory sizes
+# Output all directory sizes above threshold
+echo "NOTE: Only showing directories 1MB or larger" >> "$DIRS_LOG_FILE"
 while IFS=, read -r dir size human_size; do
-    # Skip the header line
-    if [ "$dir" != "# Directory" ]; then
+    # Skip the header line and check size threshold
+    if [ "$dir" != "# Directory" ] && [ "$size" -ge "$SIZE_THRESHOLD" ]; then
         echo "$human_size  $dir/" >> "$DIRS_LOG_FILE"
     fi
 done < "$TEMP_DIR/dir_sizes_sorted.csv"
 
+# Count and report filtered directories
+total_dirs=$(grep -v "^# " "$TEMP_DIR/dir_sizes_sorted.csv" | wc -l)
+displayed_dirs=$(grep -v "^# " "$TEMP_DIR/dir_sizes_sorted.csv" | awk -F, -v threshold="$SIZE_THRESHOLD" '$2 >= threshold {count++} END {print count}')
+echo "Showing $displayed_dirs of $total_dirs directories (filtered out $(($total_dirs - $displayed_dirs)) directories smaller than 1MB)" >> "$DIRS_LOG_FILE"
+
 echo "" >> "$DIRS_LOG_FILE"
-echo "TOP 20 LARGEST DIRECTORIES:" >> "$DIRS_LOG_FILE"
+echo "TOP $TOP_DIRS_COUNT LARGEST DIRECTORIES:" >> "$DIRS_LOG_FILE"
 echo "-------------------" >> "$DIRS_LOG_FILE"
 
-# Output top 20 largest directories
-head -n 21 "$TEMP_DIR/dir_sizes_sorted.csv" | tail -n 20 | while IFS=, read -r dir size human_size; do
+# Output top directories based on the configured count
+head -n $((TOP_DIRS_COUNT + 1)) "$TEMP_DIR/dir_sizes_sorted.csv" | tail -n $TOP_DIRS_COUNT | while IFS=, read -r dir size human_size; do
     echo "$human_size  $dir/" >> "$DIRS_LOG_FILE"
 done
 
