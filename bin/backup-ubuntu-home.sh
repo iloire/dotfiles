@@ -94,8 +94,10 @@ echo "Backup directory verified: $BACKUP_DIR"
 DATE=$(date +%Y-%m-%d)
 BACKUP_FILE="$BACKUP_DIR/home_backup_$DATE.tar.gz"
 LOG_FILE="$BACKUP_DIR/home_backup_$DATE.log"
+DIRS_LOG_FILE="$BACKUP_DIR/home_backup_directories_$DATE.log"
 echo "Backup will be saved as: $BACKUP_FILE"
 echo "Log will be saved as: $LOG_FILE"
+echo "Directory list will be saved as: $DIRS_LOG_FILE"
 
 # Start logging
 exec > >(tee -a "$LOG_FILE") 2>&1
@@ -125,6 +127,65 @@ echo "  - Patterns from .gitignore files"
 echo "  - Patterns from .tarignore files (if present)"
 echo "  - All 'Cache' folders inside .config directory"
 echo "  - /etc and /root directories"
+
+# Function to create a list of directories with sizes
+generate_directory_list() {
+    echo "===== BACKED UP DIRECTORIES WITH SIZES =====" > "$DIRS_LOG_FILE"
+    echo "Generated on: $(date)" >> "$DIRS_LOG_FILE"
+    echo "Source directory: $SOURCE" >> "$DIRS_LOG_FILE"
+    echo "" >> "$DIRS_LOG_FILE"
+    
+    echo "Generating list of home directory sizes..."
+    echo "HOME DIRECTORY SIZES:" >> "$DIRS_LOG_FILE"
+    echo "-------------------" >> "$DIRS_LOG_FILE"
+    find "$SOURCE" -type d -not -path "*/\.*" -maxdepth 2 | while read -r dir; do
+        if [ -d "$dir" ]; then
+            # Check against exclusion patterns
+            for pattern in "*.bak" "*.tmp" ".git" "$HOME/.cache" "$HOME/Downloads" "$HOME/dotfiles" "$HOME/backup" "venv" ".venv" "$HOME/snap"; do
+                if [[ "$dir" == $pattern ]]; then
+                    continue 2
+                fi
+            done
+            size=$(du -sh "$dir" 2>/dev/null | cut -f1)
+            echo "$size  $dir" >> "$DIRS_LOG_FILE"
+        fi
+    done
+    
+    echo "" >> "$DIRS_LOG_FILE"
+    echo "SYSTEM DIRECTORY SIZES:" >> "$DIRS_LOG_FILE"
+    echo "-------------------" >> "$DIRS_LOG_FILE"
+    find "/etc" -type d -maxdepth 2 | while read -r dir; do
+        if [ -d "$dir" ]; then
+            # Check against exclusion patterns
+            for pattern in "/etc/alternatives" "/etc/cache" "/etc/lvm/cache" "/etc/ssl/certs"; do
+                if [[ "$dir" == $pattern ]]; then
+                    continue 2
+                fi
+            done
+            size=$(du -sh "$dir" 2>/dev/null | cut -f1)
+            echo "$size  $dir" >> "$DIRS_LOG_FILE"
+        fi
+    done
+    
+    echo "" >> "$DIRS_LOG_FILE"
+    echo "TOP 20 LARGEST DIRECTORIES:" >> "$DIRS_LOG_FILE"
+    echo "-------------------" >> "$DIRS_LOG_FILE"
+    {
+        find "$SOURCE" -type d -not -path "*/\.*" 2>/dev/null
+        find "/etc" -type d 2>/dev/null
+    } | while read -r dir; do
+        du -sk "$dir" 2>/dev/null
+    done | sort -rn | head -20 | while read -r size dir; do
+        human_size=$(numfmt --to=iec-i --suffix=B --format="%.2f" "$size"K)
+        echo "$human_size  $dir" >> "$DIRS_LOG_FILE"
+    done
+    
+    echo "" >> "$DIRS_LOG_FILE"
+    echo "===== END OF DIRECTORY LIST =====" >> "$DIRS_LOG_FILE"
+    
+    # Also include the summary in the main log
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Directory list with sizes generated: $DIRS_LOG_FILE"
+}
 
 echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting tar archive creation..."
 
@@ -199,6 +260,10 @@ if [ $TAR_STATUS -eq 0 ]; then
     # Get file size
     BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
     echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive created successfully: $BACKUP_FILE (Size: $BACKUP_SIZE)"
+    
+    # Generate the directory listing after successful backup
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Generating directory size listing..."
+    generate_directory_list
 else
     echo "$(date +"%Y-%m-%d %H:%M:%S") - ERROR: Failed to create archive! Exit code: $TAR_STATUS"
     exit 1
@@ -230,6 +295,10 @@ if [ "$REMOTE_BACKUP" = "true" ]; then
         echo "$(date +"%Y-%m-%d %H:%M:%S") - Backup transferred successfully to $REMOTE_HOST:$REMOTE_PATH"
         echo "$(date +"%Y-%m-%d %H:%M:%S") - Transfer took $TRANSFER_MIN minutes and $TRANSFER_SEC seconds"
         
+        # Also transfer the directory listing log
+        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring directory listing to remote host..."
+        scp -v "$DIRS_LOG_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1
+        
         echo "$(date +"%Y-%m-%d %H:%M:%S") - Removing local backup file..."
         rm "$BACKUP_FILE"
         echo "$(date +"%Y-%m-%d %H:%M:%S") - Local archive $BACKUP_FILE deleted"
@@ -243,6 +312,7 @@ if [ "$REMOTE_BACKUP" = "true" ]; then
     fi
 else
     echo "$(date +"%Y-%m-%d %H:%M:%S") - No remote backup requested. Backup stored in: $BACKUP_FILE"
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - Directory listing stored in: $DIRS_LOG_FILE"
     echo "$(date +"%Y-%m-%d %H:%M:%S") - To enable remote backup use: $0 --backup-dir <backup_directory> --remote-backup <remote_user> <remote_host> <remote_path>"
 fi
 
