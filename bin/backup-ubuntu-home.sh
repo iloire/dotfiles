@@ -70,11 +70,25 @@ if [ -z "$BACKUP_DIR" ]; then
     fi
 fi
 
-# Create backup directory if it doesn't exist
+# Check if backup directory exists or can be created
 if [ ! -d "$BACKUP_DIR" ]; then
-    echo "Creating backup directory at $BACKUP_DIR"
+    echo "Backup directory does not exist, attempting to create: $BACKUP_DIR"
     mkdir -p "$BACKUP_DIR"
+    if [ ! -d "$BACKUP_DIR" ]; then
+        echo "ERROR: Failed to create backup directory at $BACKUP_DIR"
+        echo "Please ensure the path exists and is writable"
+        exit 1
+    fi
 fi
+
+# Check if backup directory is writable
+if [ ! -w "$BACKUP_DIR" ]; then
+    echo "ERROR: Backup directory exists but is not writable: $BACKUP_DIR"
+    echo "Please ensure proper permissions are set"
+    exit 1
+fi
+
+echo "Backup directory verified: $BACKUP_DIR"
 
 # Temporary backup file name with date (e.g., home_backup_2025-03-16.tar.gz)
 DATE=$(date +%Y-%m-%d)
