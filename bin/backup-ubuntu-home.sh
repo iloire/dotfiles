@@ -247,6 +247,7 @@ sudo tar -czvf "$BACKUP_FILE" \
     --exclude="$HOME/miniconda*" \
     --exclude="/root/miniconda*" \
     --exclude="$HOME/snap" \
+    --exclude="$HOME/tor-browser" \
     --exclude="venv" \
     --exclude=".venv" \
     --exclude="/etc/alternatives" \
