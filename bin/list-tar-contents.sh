@@ -57,32 +57,84 @@ grep -E '^-' "$TEMP_DIR/tar_contents.txt" | grep -v '/' | sort | while read -r l
 done
 
 echo "" >> "$DIRS_LOG_FILE"
-echo "DIRECTORY SIZES (Approximate):" >> "$DIRS_LOG_FILE"
+echo "COMPLETE DIRECTORY SIZE ANALYSIS:" >> "$DIRS_LOG_FILE"
 echo "-------------------" >> "$DIRS_LOG_FILE"
 
-# Extract unique directories (first level)
-cat "$TEMP_DIR/tar_contents.txt" | awk '{print $6}' | grep '/' | sed 's|/.*||' | sort | uniq > "$TEMP_DIR/top_dirs.txt"
+# Extract all unique directories from the tar file
+# First, get all file paths
+cat "$TEMP_DIR/tar_contents.txt" | awk '{print $6}' | sort > "$TEMP_DIR/all_paths.txt"
 
-# For each top directory, calculate size
-while read -r dir; do
+# Generate a list of all directories (including subdirectories)
+{
+  # Include explicitly listed directories (those with a 'd' prefix in tar output)
+  grep -E '^d' "$TEMP_DIR/tar_contents.txt" | awk '{print $6}' 
+  
+  # Extract implied directories from file paths
+  cat "$TEMP_DIR/all_paths.txt" | grep '/' | 
+  while read -r path; do
+    # Break path into components and reconstruct directory paths
+    # For example, path "a/b/c/file.txt" generates "a", "a/b", "a/b/c"
+    parts=$(echo "$path" | tr '/' ' ')
+    current=""
+    for part in $parts; do
+      if [ -z "$current" ]; then
+        current="$part"
+      else
+        current="$current/$part"
+      fi
+      # Output each directory component except the last one (which is the file itself)
+      if [ "$current" != "$path" ]; then
+        echo "$current"
+      fi
+    done
+  done
+} | sort | uniq > "$TEMP_DIR/all_dirs.txt"
+
+# Calculate sizes for each directory
+echo "# Directory, Size (bytes), Human-readable size" > "$TEMP_DIR/dir_sizes.csv"
+
+# For each directory, calculate the total size of all files directly within it
+cat "$TEMP_DIR/all_dirs.txt" | while read -r dir; do
     if [ -n "$dir" ]; then
-        # Get all files in this directory (and subdirectories)
-        grep -E "^-" "$TEMP_DIR/tar_contents.txt" | grep "^-" | grep -E "$dir/" > "$TEMP_DIR/dir_files.txt" || true
+        # Find all files directly in this directory (not in subdirectories)
+        # We match the exact directory pattern to avoid counting files in subdirectories
+        # e.g., for 'dir1/dir2', we want to match 'dir1/dir2/file' but not 'dir1/dir2/subdir/file'
+        grep -E "^-" "$TEMP_DIR/tar_contents.txt" | grep -E "^.* $dir/[^/]+$" > "$TEMP_DIR/dir_files.txt" || true
         
         # Calculate total size
-        total_size=0
+        dir_size=0
         while read -r file_line; do
             file_size=$(echo "$file_line" | awk '{print $3}')
-            total_size=$((total_size + file_size))
+            dir_size=$((dir_size + file_size))
         done < "$TEMP_DIR/dir_files.txt"
         
-        # Convert to human-readable
-        if [ $total_size -gt 0 ]; then
-            human_size=$(numfmt --to=iec-i --suffix=B --format="%.2f" "$total_size")
-            echo "$human_size  $dir/" >> "$DIRS_LOG_FILE"
+        # Convert to human-readable and add to CSV
+        if [ -n "$dir" ]; then
+            human_size=$(numfmt --to=iec-i --suffix=B --format="%.2f" "$dir_size")
+            echo "$dir,$dir_size,$human_size" >> "$TEMP_DIR/dir_sizes.csv"
         fi
     fi
-done < "$TEMP_DIR/top_dirs.txt"
+done
+
+# Sort the directories by size (largest first) for display
+sort -t, -k2 -nr "$TEMP_DIR/dir_sizes.csv" > "$TEMP_DIR/dir_sizes_sorted.csv"
+
+# Output all directory sizes
+while IFS=, read -r dir size human_size; do
+    # Skip the header line
+    if [ "$dir" != "# Directory" ]; then
+        echo "$human_size  $dir/" >> "$DIRS_LOG_FILE"
+    fi
+done < "$TEMP_DIR/dir_sizes_sorted.csv"
+
+echo "" >> "$DIRS_LOG_FILE"
+echo "TOP 20 LARGEST DIRECTORIES:" >> "$DIRS_LOG_FILE"
+echo "-------------------" >> "$DIRS_LOG_FILE"
+
+# Output top 20 largest directories
+head -n 21 "$TEMP_DIR/dir_sizes_sorted.csv" | tail -n 20 | while IFS=, read -r dir size human_size; do
+    echo "$human_size  $dir/" >> "$DIRS_LOG_FILE"
+done
 
 echo "" >> "$DIRS_LOG_FILE"
 echo "TOP 20 LARGEST FILES IN ARCHIVE:" >> "$DIRS_LOG_FILE"
@@ -127,9 +179,11 @@ echo "-------------------" >> "$DIRS_LOG_FILE"
 # Count total number of files and directories
 total_files=$(grep -E "^-" "$TEMP_DIR/tar_contents.txt" | wc -l)
 total_dirs=$(grep -E "^d" "$TEMP_DIR/tar_contents.txt" | wc -l)
+implied_dirs=$(cat "$TEMP_DIR/all_dirs.txt" | wc -l)
 echo "Total files: $total_files" >> "$DIRS_LOG_FILE"
-echo "Total directories: $total_dirs" >> "$DIRS_LOG_FILE"
-echo "Total entries: $((total_files + total_dirs))" >> "$DIRS_LOG_FILE"
+echo "Total explicit directories: $total_dirs" >> "$DIRS_LOG_FILE"
+echo "Total directories (including implied): $implied_dirs" >> "$DIRS_LOG_FILE"
+echo "Total entries: $((total_files + implied_dirs))" >> "$DIRS_LOG_FILE"
 
 echo "" >> "$DIRS_LOG_FILE"
 echo "===== END OF ARCHIVE CONTENT ANALYSIS =====" >> "$DIRS_LOG_FILE"
