@@ -135,68 +135,27 @@ echo "  - Patterns from .tarignore files (if present)"
 echo "  - All 'Cache' folders inside .config directory"
 echo "  - /etc and /root directories"
 
-# Function to create a list of directories with sizes
-generate_directory_list() {
-    echo "===== BACKED UP DIRECTORIES WITH SIZES =====" > "$DIRS_LOG_FILE"
-    echo "Generated on: $(date)" >> "$DIRS_LOG_FILE"
-    echo "Source directory: $SOURCE" >> "$DIRS_LOG_FILE"
-    echo "" >> "$DIRS_LOG_FILE"
+# Check if list-tar-contents.sh exists and is executable
+LIST_TAR_SCRIPT="$(dirname "$0")/list-tar-contents.sh"
+if [ ! -x "$LIST_TAR_SCRIPT" ]; then
+    echo "$DATE_STR - WARNING: $LIST_TAR_SCRIPT not found or not executable"
+    echo "$DATE_STR - Directory listing will be skipped"
+    SKIP_LISTING=true
     
-    echo "Generating list of home directory sizes..."
-    echo "HOME DIRECTORY SIZES:" >> "$DIRS_LOG_FILE"
-    echo "-------------------" >> "$DIRS_LOG_FILE"
-    find "$SOURCE" -type d -not -path "*/\.*" -maxdepth 2 | while read -r dir; do
-        if [ -d "$dir" ]; then
-            # Check against exclusion patterns
-            for pattern in "*.bak" "*.tmp" ".git" "$HOME/.cache" "$HOME/Downloads" "$HOME/dotfiles" "$HOME/backup" "venv" ".venv" "$HOME/snap"; do
-                if [[ "$dir" == $pattern ]]; then
-                    continue 2
-                fi
-            done
-            size=$(du -sh "$dir" 2>/dev/null | cut -f1)
-            echo "$size  $dir" >> "$DIRS_LOG_FILE"
-        fi
-    done
-    
-    echo "" >> "$DIRS_LOG_FILE"
-    echo "SYSTEM DIRECTORY SIZES:" >> "$DIRS_LOG_FILE"
-    echo "-------------------" >> "$DIRS_LOG_FILE"
-    find "/etc" -type d -maxdepth 2 | while read -r dir; do
-        if [ -d "$dir" ]; then
-            # Check against exclusion patterns
-            for pattern in "/etc/alternatives" "/etc/cache" "/etc/lvm/cache" "/etc/ssl/certs"; do
-                if [[ "$dir" == $pattern ]]; then
-                    continue 2
-                fi
-            done
-            size=$(du -sh "$dir" 2>/dev/null | cut -f1)
-            echo "$size  $dir" >> "$DIRS_LOG_FILE"
-        fi
-    done
-    
-    echo "" >> "$DIRS_LOG_FILE"
-    echo "TOP 20 LARGEST DIRECTORIES:" >> "$DIRS_LOG_FILE"
-    echo "-------------------" >> "$DIRS_LOG_FILE"
-    {
-        find "$SOURCE" -type d -not -path "*/\.*" 2>/dev/null
-        find "/etc" -type d 2>/dev/null
-    } | while read -r dir; do
-        du -sk "$dir" 2>/dev/null
-    done | sort -rn | head -20 | while read -r size dir; do
-        human_size=$(numfmt --to=iec-i --suffix=B --format="%.2f" "$size"K)
-        echo "$human_size  $dir" >> "$DIRS_LOG_FILE"
-    done
-    
-    echo "" >> "$DIRS_LOG_FILE"
-    echo "===== END OF DIRECTORY LIST =====" >> "$DIRS_LOG_FILE"
-    
-    # Also include the summary in the main log
-    echo "$DATE_STR - Directory list with sizes generated: $DIRS_LOG_FILE"
-}
+    # Make sure the script exists even if not executable
+    if [ ! -f "$LIST_TAR_SCRIPT" ]; then
+        echo "$DATE_STR - ERROR: $LIST_TAR_SCRIPT not found. Please create this file first."
+        exit 1
+    else
+        echo "$DATE_STR - Making script executable: chmod +x $LIST_TAR_SCRIPT"
+        chmod +x "$LIST_TAR_SCRIPT"
+        SKIP_LISTING=false
+    fi
+fi
 
 echo "$DATE_STR - Starting tar archive creation..."
 
-# Create the tar.gz archive with exclusions
+# Create the tar.gz archive with exclusions - using sudo to access system files
 sudo tar -czvf "$BACKUP_FILE" \
     --exclude="*.bak" \
     --exclude="*.tmp" \
@@ -266,25 +225,33 @@ sudo tar -czvf "$BACKUP_FILE" \
 # Check if tar was successful
 TAR_STATUS=${PIPESTATUS[0]}
 
+# Ensure the backup file is owned by the current user
+if [ -f "$BACKUP_FILE" ]; then
+    sudo chown "$CURRENT_USER_ID:$CURRENT_GROUP_ID" "$BACKUP_FILE"
+    sudo chmod 644 "$BACKUP_FILE"
+fi
+
+# Ensure the log files are also owned by the current user
+if [ -f "$LOG_FILE" ]; then
+    sudo chown "$CURRENT_USER_ID:$CURRENT_GROUP_ID" "$LOG_FILE"
+    sudo chmod 644 "$LOG_FILE"
+fi
+
 if [ $TAR_STATUS -eq 0 ]; then
     # Get file size
     BACKUP_SIZE="$(du -h "$BACKUP_FILE" | cut -f1)"
     echo "$DATE_STR - Archive created successfully: $BACKUP_FILE (Size: $BACKUP_SIZE)"
     
-    # Generate the directory listing after successful backup
-    echo "$DATE_STR - Generating directory size listing..."
-    generate_directory_list
-
-    # Ensure the backup file is owned by the current user
-    if [ -f "$BACKUP_FILE" ]; then
-        chown "$CURRENT_USER_ID:$CURRENT_GROUP_ID" "$BACKUP_FILE"
-        chmod 644 "$BACKUP_FILE"
-    fi
-    
-    # Ensure the log files are also owned by the current user
-    if [ -f "$LOG_FILE" ]; then
-        chown "$CURRENT_USER_ID:$CURRENT_GROUP_ID" "$LOG_FILE"
-        chmod 644 "$LOG_FILE"
+    # Generate the directory listing by analyzing the tar archive
+    if [ "$SKIP_LISTING" != "true" ]; then
+        echo "$DATE_STR - Analyzing archive contents..."
+        "$LIST_TAR_SCRIPT" "$BACKUP_FILE" "$DIRS_LOG_FILE" "$SOURCE"
+        ANALYZE_STATUS=$?
+        if [ $ANALYZE_STATUS -ne 0 ]; then
+            echo "$DATE_STR - WARNING: Directory listing generation failed with status $ANALYZE_STATUS"
+        else
+            echo "$DATE_STR - Directory listing created successfully: $DIRS_LOG_FILE"
+        fi
     fi
 else
     echo "$DATE_STR - ERROR: Failed to create archive! Exit code: $TAR_STATUS"
@@ -318,8 +285,10 @@ if [ "$REMOTE_BACKUP" = "true" ]; then
         echo "$DATE_STR - Transfer took $TRANSFER_MIN minutes and $TRANSFER_SEC seconds"
         
         # Also transfer the directory listing log
-        echo "$DATE_STR - Transferring directory listing to remote host..."
-        scp -v "$DIRS_LOG_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1
+        if [ -f "$DIRS_LOG_FILE" ]; then
+            echo "$DATE_STR - Transferring directory listing to remote host..."
+            scp -v "$DIRS_LOG_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1
+        fi
         
         echo "$DATE_STR - Removing local backup file..."
         rm "$BACKUP_FILE"
