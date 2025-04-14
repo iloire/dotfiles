@@ -257,16 +257,18 @@ sudo tar -czvf "$BACKUP_FILE" \
 
 # Check if tar was successful
 TAR_STATUS=${PIPESTATUS[0]}
+DATE_STR=$(date +"%Y-%m-%d %H:%M:%S")
+
 if [ $TAR_STATUS -eq 0 ]; then
     # Get file size
-    BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive created successfully: $BACKUP_FILE (Size: $BACKUP_SIZE)"
+    BACKUP_SIZE="$(du -h "$BACKUP_FILE" | cut -f1)"
+    echo "$DATE_STR - Archive created successfully: $BACKUP_FILE (Size: $BACKUP_SIZE)"
     
     # Generate the directory listing after successful backup
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Generating directory size listing..."
+    echo "$DATE_STR - Generating directory size listing..."
     generate_directory_list
 else
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - ERROR: Failed to create archive! Exit code: $TAR_STATUS"
+    echo "$DATE_STR - ERROR: Failed to create archive! Exit code: $TAR_STATUS"
     exit 1
 fi
 
@@ -275,13 +277,13 @@ END_TIME=$(date +%s)
 ELAPSED=$((END_TIME - START_TIME))
 MINUTES=$((ELAPSED / 60))
 SECONDS=$((ELAPSED % 60))
-echo "$(date +"%Y-%m-%d %H:%M:%S") - Archive creation took $MINUTES minutes and $SECONDS seconds"
+echo "$DATE_STR - Archive creation took $MINUTES minutes and $SECONDS seconds"
 
 # Check if remote backup is enabled
 if [ "$REMOTE_BACKUP" = "true" ]; then
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== REMOTE TRANSFER ====="
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring backup to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH..."
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting transfer at $(date)"
+    echo "$DATE_STR - ===== REMOTE TRANSFER ====="
+    echo "$DATE_STR - Transferring backup to $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH..."
+    echo "$DATE_STR - Starting transfer at $(date)"
     
     TRANSFER_START=$(date +%s)
     scp -v "$BACKUP_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1
@@ -293,33 +295,33 @@ if [ "$REMOTE_BACKUP" = "true" ]; then
         TRANSFER_MIN=$((TRANSFER_TIME / 60))
         TRANSFER_SEC=$((TRANSFER_TIME % 60))
         
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Backup transferred successfully to $REMOTE_HOST:$REMOTE_PATH"
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transfer took $TRANSFER_MIN minutes and $TRANSFER_SEC seconds"
+        echo "$DATE_STR - Backup transferred successfully to $REMOTE_HOST:$REMOTE_PATH"
+        echo "$DATE_STR - Transfer took $TRANSFER_MIN minutes and $TRANSFER_SEC seconds"
         
         # Also transfer the directory listing log
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring directory listing to remote host..."
+        echo "$DATE_STR - Transferring directory listing to remote host..."
         scp -v "$DIRS_LOG_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1
         
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Removing local backup file..."
+        echo "$DATE_STR - Removing local backup file..."
         rm "$BACKUP_FILE"
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Local archive $BACKUP_FILE deleted"
+        echo "$DATE_STR - Local archive $BACKUP_FILE deleted"
         
         # Also transfer the log file
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - Transferring log file to remote host..."
+        echo "$DATE_STR - Transferring log file to remote host..."
         scp -v "$LOG_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1
     else
-        echo "$(date +"%Y-%m-%d %H:%M:%S") - ERROR: Transfer failed! Exit code: $SCP_STATUS"
+        echo "$DATE_STR - ERROR: Transfer failed! Exit code: $SCP_STATUS"
         exit 1
     fi
 else
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - No remote backup requested. Backup stored in: $BACKUP_FILE"
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Directory listing stored in: $DIRS_LOG_FILE"
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - To enable remote backup use: $0 --backup-dir <backup_directory> --remote-backup <remote_user> <remote_host> <remote_path>"
+    echo "$DATE_STR - No remote backup requested. Backup stored in: $BACKUP_FILE"
+    echo "$DATE_STR - Directory listing stored in: $DIRS_LOG_FILE"
+    echo "$DATE_STR - To enable remote backup use: $0 --backup-dir <backup_directory> --remote-backup <remote_user> <remote_host> <remote_path>"
 fi
 
-echo "$(date +"%Y-%m-%d %H:%M:%S") - ===== BACKUP PROCESS COMPLETED ====="
-echo "$(date +"%Y-%m-%d %H:%M:%S") - Finished at: $(date)"
+echo "$DATE_STR - ===== BACKUP PROCESS COMPLETED ====="
+echo "$DATE_STR - Finished at: $(date)"
 TOTAL_TIME=$(($(date +%s) - START_TIME))
 TOTAL_MIN=$((TOTAL_TIME / 60))
 TOTAL_SEC=$((TOTAL_TIME % 60))
-echo "$(date +"%Y-%m-%d %H:%M:%S") - Total execution time: $TOTAL_MIN minutes and $TOTAL_SEC seconds"
+echo "$DATE_STR - Total execution time: $TOTAL_MIN minutes and $TOTAL_SEC seconds"
