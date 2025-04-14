@@ -92,6 +92,8 @@ echo "Backup directory verified: $BACKUP_DIR"
 
 # Temporary backup file name with date (e.g., home_backup_2025-03-16.tar.gz)
 DATE=$(date +%Y-%m-%d)
+DATE_STR=$(date +"%Y-%m-%d %H:%M:%S")
+
 BACKUP_FILE="$BACKUP_DIR/home_backup_$DATE.tar.gz"
 LOG_FILE="$BACKUP_DIR/home_backup_$DATE.log"
 DIRS_LOG_FILE="$BACKUP_DIR/home_backup_directories_$DATE.log"
@@ -184,10 +186,10 @@ generate_directory_list() {
     echo "===== END OF DIRECTORY LIST =====" >> "$DIRS_LOG_FILE"
     
     # Also include the summary in the main log
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - Directory list with sizes generated: $DIRS_LOG_FILE"
+    echo "$DATE_STR - Directory list with sizes generated: $DIRS_LOG_FILE"
 }
 
-echo "$(date +"%Y-%m-%d %H:%M:%S") - Starting tar archive creation..."
+echo "$DATE_STR - Starting tar archive creation..."
 
 # Create the tar.gz archive with exclusions
 sudo tar -czvf "$BACKUP_FILE" \
@@ -211,10 +213,10 @@ sudo tar -czvf "$BACKUP_FILE" \
     --exclude="$HOME/.oh-my-zsh" \
     --exclude="$HOME/code/*/build" \
     --exclude="$HOME/code/*/dist" \
-    --exclude="$HOME/code/*/node_modules" \
     --exclude="$HOME/code/*/out" \
     --exclude="$HOME/code/*/release" \
     --exclude="$HOME/code/*/cache" \
+    --exclude="$HOME/*/node_modules" \
     --exclude="$HOME/.dbus" \
     --exclude="$HOME/.docker" \
     --exclude="$HOME/dotfiles" \
@@ -258,7 +260,6 @@ sudo tar -czvf "$BACKUP_FILE" \
 
 # Check if tar was successful
 TAR_STATUS=${PIPESTATUS[0]}
-DATE_STR=$(date +"%Y-%m-%d %H:%M:%S")
 
 if [ $TAR_STATUS -eq 0 ]; then
     # Get file size
