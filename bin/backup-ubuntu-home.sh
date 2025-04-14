@@ -179,7 +179,7 @@ sudo tar -czvf "$BACKUP_FILE" \
     --exclude="$HOME/.wine" \
     --exclude="$HOME/.vscode" \
     --exclude="$HOME/.Xauthority" \
-    --exclude="$HOME/VirtualBox VMs" \
+    --exclude="$HOME/VirtualBox*" \
     --exclude="$HOME/vms" \
     --exclude="$HOME/*/Cache" \
     --exclude="$HOME/backup" \
