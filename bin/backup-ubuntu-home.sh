@@ -208,6 +208,7 @@ sudo tar -czvf "$BACKUP_FILE" \
     --exclude="$HOME/.config/*/CacheStorage" \
     --exclude="$HOME/.config/*/cache" \
     --exclude="$HOME/.config/balena-etcher*" \
+    --exclude="$HOME/.oh-my-zsh" \
     --exclude="$HOME/code/*/build" \
     --exclude="$HOME/code/*/dist" \
     --exclude="$HOME/code/*/node_modules" \
