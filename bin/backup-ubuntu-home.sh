@@ -14,6 +14,11 @@ REMOTE_USER=""
 REMOTE_HOST=""
 REMOTE_PATH=""
 
+# Store the current user information
+CURRENT_USER=$(whoami)
+CURRENT_USER_ID=$(id -u)
+CURRENT_GROUP_ID=$(id -g)
+
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -269,6 +274,18 @@ if [ $TAR_STATUS -eq 0 ]; then
     # Generate the directory listing after successful backup
     echo "$DATE_STR - Generating directory size listing..."
     generate_directory_list
+
+    # Ensure the backup file is owned by the current user
+    if [ -f "$BACKUP_FILE" ]; then
+        chown "$CURRENT_USER_ID:$CURRENT_GROUP_ID" "$BACKUP_FILE"
+        chmod 644 "$BACKUP_FILE"
+    fi
+    
+    # Ensure the log files are also owned by the current user
+    if [ -f "$LOG_FILE" ]; then
+        chown "$CURRENT_USER_ID:$CURRENT_GROUP_ID" "$LOG_FILE"
+        chmod 644 "$LOG_FILE"
+    fi
 else
     echo "$DATE_STR - ERROR: Failed to create archive! Exit code: $TAR_STATUS"
     exit 1
