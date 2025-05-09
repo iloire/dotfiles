@@ -1,0 +1,4 @@
+[MIME Cache]
+application/x-cursor-workspace=applications-cursor.desktop;
+text/html=applications-obsidian.desktop;
+x-scheme-handler/obsidian=applications-obsidian.desktop;

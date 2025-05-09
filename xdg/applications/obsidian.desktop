@@ -3,6 +3,7 @@ Version=1.0
 Name=Obsidian
 Comment=Obsidian
 Exec=/home/ivan/apps/Obsidian.AppImage
+TryExec=/home/ivan/apps/Obsidian.AppImage
 Icon=dialog-information
 Terminal=false
 Type=Application

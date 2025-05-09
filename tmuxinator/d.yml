@@ -1,37 +1,46 @@
 # /Users/ivan/.config/tmuxinator/d.yml
 
-name: default 
+name: default
 root: ~/
 
 windows:
   - notes:
       layout: main-horizontal
       panes:
-      - editor:
-          - cd ~/notes
-          - n .
-      - console:
-          - cd ~/notes
-          - git fetch
+        - editor:
+            - cd ~/notes
+            - n .
+        - console:
+            - cd ~/notes
+            - git fetch
   - console:
       panes:
-      - console:
-          - cd ~/
+        - console:
+            - cd ~/
   - dotfiles:
       layout: main-horizontal
       panes:
-      - editor:
-          - cd ~/dotfiles
-          - n .
-      - console:
-          - cd ~/dotfiles
-          - git fetch
+        - editor:
+            - cd ~/dotfiles
+            - n .
+        - console:
+            - cd ~/dotfiles
+            - git fetch
+  - myconfig:
+      layout: main-horizontal
+      panes:
+        - editor:
+            - cd ~/myconfig
+            - n .
+        - console:
+            - cd ~/myconfig
+            - git fetch
   - ansible:
       layout: main-horizontal
       panes:
-      - editor:
-          - cd ~/code/ansible-recipes/
-          - n .
-      - console:
-          - cd ~/code/ansible-recipes/
-          - git fetch
+        - editor:
+            - cd ~/code/ansible-recipes/
+            - n .
+        - console:
+            - cd ~/code/ansible-recipes/
+            - git fetch

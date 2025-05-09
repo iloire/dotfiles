@@ -3,6 +3,7 @@ Name=Cursor
 Comment=The AI Code Editor.
 GenericName=Text Editor
 Exec=/home/ivan/apps/Cursor.AppImage
+TryExec=/home/ivan/apps/Cursor.AppImage
 Icon=/home/ivan/dotfiles/xdg/applications/cursor.png
 Type=Application
 StartupNotify=false
@@ -10,3 +11,9 @@ StartupWMClass=Cursor
 Categories=TextEditor;Development;IDE;
 MimeType=application/x-cursor-workspace;
 Keywords=cursor;
+
+
+[Desktop Action New]
+Name=New Cursor
+Exec=/home/ivan/apps/Cursor.AppImage
+
