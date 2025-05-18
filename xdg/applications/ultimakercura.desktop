@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Cursor
+Type=Application
+Exec=/home/ivan/apps/Ultimaker-Cura.AppImage
+Icon=/home/ivan/dotfiles/xdg/applications/ultimakercura.png
+Categories=TextEditor;Development;IDE;
+
