@@ -12,5 +12,6 @@
   },
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
-  "editor.fontWeight": "normal"
+  "editor.fontWeight": "normal",
+  "typescript.updateImportsOnFileMove.enabled": "always"
 }
