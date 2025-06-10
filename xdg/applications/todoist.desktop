@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Todoist
+Type=Application
+Exec=todoist
+#Icon=/home/ivan/dotfiles/xdg/applications/cursor.png
+#Categories=TextEditor;Development;IDE;
+
