@@ -1,7 +1,6 @@
 [Desktop Entry]
 Name=Obsidian
 Type=Application
-Exec=/home/ivan/apps/Obsidian.AppImage
-Icon=/home/ivan/dotfiles/xdg/applications/obsidian-icon.png
+Exec=/snap/bin/obsidian
 Categories=Utility;Application;
 

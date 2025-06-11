@@ -5,5 +5,5 @@ Exec=/snap/bin/todoist
 Icon=todoist
 Terminal=false
 Comment=Todoist
-Categories=Office;Productivity;
+Categories=Utility;Application;
 StartupNotify=true
