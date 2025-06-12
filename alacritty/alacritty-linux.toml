@@ -88,8 +88,8 @@ hide_when_typing = true
 history = 10000
 multiplier = 3
 
-[terminal.shell]
-program = "/usr/bin/zsh"
+#[terminal.shell]
+#program = "/usr/bin/zsh"
 
 [window]
 decorations = "full"
@@ -110,7 +110,7 @@ lines = 40
 x = 0
 y = 0
 
-[general]
-working_directory = "None"
+#[general]
+#working_directory = "None"
 
 [terminal]
