@@ -2,5 +2,6 @@
 Name=Obsidian
 Type=Application
 Exec=/snap/bin/obsidian
+Icon=/snap/obsidian/current/meta/gui/icon.png
 Categories=Utility;Application;
 

@@ -2,3 +2,4 @@
 .idea/
 *.swp
 shell/local-overrides
+xdg/applications/mimeinfo.cache

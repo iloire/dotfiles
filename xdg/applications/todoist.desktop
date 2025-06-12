@@ -2,5 +2,6 @@
 Name=Todoist
 Type=Application
 Exec=/snap/bin/todoist
+Icon=/snap/todoist/current/meta/gui/icon.png
 Categories=Utility;Application;
 
