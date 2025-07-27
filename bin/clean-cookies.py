@@ -19,7 +19,9 @@ import datetime
 import re
 from sys import platform
 
-if os.getenv('EXECUTE_COOKIE_CLEANING') == 'false':
+# Check for a specific file in the user's home directory
+stop_file = os.path.expanduser("~/stop_cookie_cleaning.txt")
+if os.path.exists(stop_file):
     sys.exit(0)
 
 home_dir = os.path.expanduser('~')
