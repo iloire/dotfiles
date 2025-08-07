@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 import os
+import sys
+
 from datetime import datetime, timedelta
 
+stop_file = os.path.expanduser("~/stop_cookie_cleaning.txt")
+if os.path.exists(stop_file):
+    sys.exit(0)
 
 # Configuration
 home_dir = os.path.expanduser('~')
