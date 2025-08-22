@@ -3,29 +3,41 @@
 # VS Code launcher script with predefined folder mappings
 # Usage: c.sh <folder_name>
 
-if [ $# -eq 0 ]; then
+# Command definitions: "command:description:path"
+declare -a COMMANDS=(
+    "calma:Opens lacalmaeduca.com project:$HOME/code/lacalmaeduca.com/www-site"
+    "dotfiles:Opens dotfiles directory:$HOME/dotfiles"
+    "hosts:Opens hosts file:/etc/hosts"
+)
+
+show_help() {
     echo "Usage: c.sh <folder_name>"
     echo "Available folders:"
-    echo "  dotfiles - Opens $HOME/dotfiles"
-    echo "  hosts    - Opens /etc/hosts"
+    for cmd in "${COMMANDS[@]}"; do
+        IFS=':' read -r name desc path <<< "$cmd"
+        printf "  %-10s - %s\n" "$name" "$desc"
+    done
+}
+
+if [ $# -eq 0 ]; then
+    show_help
     exit 1
 fi
 
-case "$1" in
-    "calma")
-        code -n "$HOME/code/lacalmaeduca.com/www-site"
-        ;;
-    "dotfiles")
-        code -n "$HOME/dotfiles"
-        ;;
-    "hosts")
-        code -n "/etc/hosts"
-        ;;
-    *)
-        echo "Unknown folder: $1"
-        echo "Available folders:"
-        echo "  dotfiles - Opens $HOME/dotfiles"
-        echo "  hosts    - Opens /etc/hosts"
-        exit 1
-        ;;
-esac
+# Find and execute command
+found=false
+for cmd in "${COMMANDS[@]}"; do
+    IFS=':' read -r name desc path <<< "$cmd"
+    if [ "$1" = "$name" ]; then
+        code -n "$path"
+        found=true
+        break
+    fi
+done
+
+if [ "$found" = false ]; then
+    echo "Unknown folder: $1"
+    echo
+    show_help
+    exit 1
+fi
