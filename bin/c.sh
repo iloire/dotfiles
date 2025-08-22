@@ -12,6 +12,9 @@ if [ $# -eq 0 ]; then
 fi
 
 case "$1" in
+    "calma")
+        code -n "$HOME/code/lacalmaeduca.com/www-site"
+        ;;
     "dotfiles")
         code -n "$HOME/dotfiles"
         ;;
