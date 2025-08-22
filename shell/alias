@@ -37,7 +37,7 @@ alias cd....='cd ../../..'
 
 alias d="cd ~/Dropbox"
 alias dl="cd ~/Downloads"
-alias c='cd ~/code'
+alias c='c.sh'
 alias h='cd ~/'
 
 # docker
