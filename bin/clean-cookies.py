@@ -17,6 +17,7 @@ import os
 import sys
 import datetime
 import re
+import glob
 from sys import platform
 
 # Check for a specific file in the user's home directory
@@ -29,9 +30,11 @@ run_clean = (len(sys.argv)> 1 and sys.argv[1] == '--clean')
 whitelist_dir = f'{home_dir}/myconfig/cookies-whitelist.txt'
 log_file = f'{home_dir}/cookies-whitelist-log.log'
 
-def append_to_log(log_file, deleted_rows):
+def append_to_log(log_file, profile_name, deleted_rows, kept_rows):
     current_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_line = f"{current_date} - deleted rows: {len(deleted_rows)}\n"
+    log_line = f"{current_date} - Profile: {profile_name} - Deleted: {len(deleted_rows)} cookies, Kept: {len(kept_rows)} cookies\n"
+    if deleted_rows:
+        log_line += f"  Deleted domains: {', '.join(deleted_rows[:10])}" + ("..." if len(deleted_rows) > 10 else "") + "\n"
     with open(log_file, "a") as file:
         file.write(log_line)
 
@@ -53,13 +56,31 @@ def get_cookie_host_list(db_path):
     conn.close()
     return cookie_host_list
 
-def get_db_path():
+def get_all_db_paths():
+    chrome_profiles = []
+    
     if platform == 'linux' or platform == 'linux2':
-        return f'{home_dir}/.config/google-chrome/Default/Cookies'
+        chrome_dir = f'{home_dir}/.config/google-chrome'
+        if os.path.exists(chrome_dir):
+            # Find all profile directories that contain a Cookies file
+            profile_paths = glob.glob(f'{chrome_dir}/*/Cookies')
+            for path in profile_paths:
+                profile_dir = os.path.dirname(path)
+                profile_name = os.path.basename(profile_dir)
+                chrome_profiles.append((profile_name, path))
     elif platform == 'darwin':
-        return f'{home_dir}/Library/Application Support/Google/Chrome/Default/Cookies'
+        chrome_dir = f'{home_dir}/Library/Application Support/Google/Chrome'
+        if os.path.exists(chrome_dir):
+            # Find all profile directories that contain a Cookies file
+            profile_paths = glob.glob(f'{chrome_dir}/*/Cookies')
+            for path in profile_paths:
+                profile_dir = os.path.dirname(path)
+                profile_name = os.path.basename(profile_dir)
+                chrome_profiles.append((profile_name, path))
+    
+    return chrome_profiles
 
-def remove_cookies_hosts(cookie_hosts_to_remove):
+def remove_cookies_hosts(db_path, cookie_hosts_to_remove):
     conn = db.connect(db_path)
     c = conn.cursor()
     for host in cookie_hosts_to_remove:
@@ -76,22 +97,55 @@ if not os.path.exists(whitelist_dir):
 with open(whitelist_dir) as f:
     white_listed_lines = f.read().splitlines()
 
-db_path = get_db_path()
-if not os.path.exists(db_path):
-    print(f'database file not found on {db_path}')
+chrome_profiles = get_all_db_paths()
+if not chrome_profiles:
+    print('No Chrome profiles found')
     quit()
 
-cookie_host_list = get_cookie_host_list(db_path)    
+print(f"Found {len(chrome_profiles)} Chrome profiles")
 
-cookies_to_keep, cookie_hosts_to_remove = filter_strings(cookie_host_list, white_listed_lines)
-if (run_clean):
-    remove_cookies_hosts(cookie_hosts_to_remove)
-    append_to_log(log_file, cookie_hosts_to_remove)
-else:
-    print(f"--- dry run: skipping removing cookie for hosts")
-    print('--- Cookies to be removed:')
-    print(cookie_hosts_to_remove)
-    print('--- Whitelisted cookies:')
-    print(cookies_to_keep)
-    print('--- Cookies hosts:')
-    print(cookie_host_list)
+total_deleted = 0
+total_kept = 0
+
+for profile_name, db_path in chrome_profiles:
+    print(f"\nProcessing profile: {profile_name}")
+    
+    if not os.path.exists(db_path):
+        print(f'  Database file not found: {db_path}')
+        continue
+    
+    try:
+        cookie_host_list = get_cookie_host_list(db_path)
+        print(f"  Found {len(cookie_host_list)} cookie hosts")
+        
+        cookies_to_keep, cookie_hosts_to_remove = filter_strings(cookie_host_list, white_listed_lines)
+        
+        print(f"  Cookies to keep: {len(cookies_to_keep)}")
+        print(f"  Cookies to remove: {len(cookie_hosts_to_remove)}")
+        
+        if run_clean:
+            if cookie_hosts_to_remove:
+                remove_cookies_hosts(db_path, cookie_hosts_to_remove)
+                print(f"  ✓ Removed {len(cookie_hosts_to_remove)} cookie hosts")
+            else:
+                print(f"  ✓ No cookies to remove")
+            append_to_log(log_file, profile_name, cookie_hosts_to_remove, cookies_to_keep)
+        else:
+            print(f"  --- DRY RUN: Would remove {len(cookie_hosts_to_remove)} cookie hosts")
+            if cookie_hosts_to_remove:
+                print(f"  --- Domains to be removed: {', '.join(cookie_hosts_to_remove[:5])}" + ("..." if len(cookie_hosts_to_remove) > 5 else ""))
+        
+        total_deleted += len(cookie_hosts_to_remove)
+        total_kept += len(cookies_to_keep)
+        
+    except Exception as e:
+        print(f"  Error processing profile {profile_name}: {str(e)}")
+        continue
+
+print(f"\n=== Summary ===")
+print(f"Processed {len(chrome_profiles)} profiles")
+print(f"Total cookies to keep: {total_kept}")
+print(f"Total cookies {'removed' if run_clean else 'to remove'}: {total_deleted}")
+
+if not run_clean:
+    print("\nRun with --clean flag to actually remove cookies")
