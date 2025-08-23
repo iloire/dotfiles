@@ -8,7 +8,8 @@
     "ask": [],
     "additionalDirectories": [
       "/home/ivan/.config/google-chrome",
-      "/tmp"
+      "/tmp",
+      "/Users/ivan"
     ]
   }
 }

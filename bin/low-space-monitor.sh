@@ -17,7 +17,8 @@ df -H | grep -vE '^Filesystem|tmpfs|cdrom' | awk '{ print $5 " " $1 }' | while r
 	usep=$(echo "$output" | awk '{ print $1}' | cut -d'%' -f1)
 	partition=$(echo "$output" | awk '{ print $2 }')
 	lockname=$(echo $partition | tr / _)
-	if [ $usep -ge $ALERT ]; then
+	# Check if usep is a valid integer (handle macOS df output differences)
+	if [[ "$usep" =~ ^[0-9]+$ ]] && [ $usep -ge $ALERT ]; then
 		msg="Running out of space \"$partition ($usep%)\" on $(hostname) as on $(date)"
 		echo "$msg" >>$LOGFILENAME
 		$HOME/dotfiles/bin/send-ses.sh "Alert on $(hostname): Almost out of disk space $usep% (ALERT AT $ALERT%)" "$msg"
