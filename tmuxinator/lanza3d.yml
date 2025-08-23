@@ -11,6 +11,7 @@ windows:
       - editor:
           - nvim ~/code/lanzarote3d/
       - yarn:
+          - code -n ~/code/lanzarote3d
           - cd ~/code/lanzarote3d
           - nvm
           - yarn start

@@ -17,6 +17,7 @@ windows:
   - backend:
       panes:
       - editor:
+          - code -n ~/code/lacalmaeduca.com/www-site/
           - cd ~/code/lanzaroteparagliding/backend/src/
           - n .
       - run:

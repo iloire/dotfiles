@@ -11,6 +11,7 @@ windows:
       - editor:
           - nvim ~/code/theflyingdevil.com/
       - yarn:
+          - code -n ~/code/theflyingdevil.com/
           - cd ~/code/theflyingdevil.com/
           - nvm
           - yarn start

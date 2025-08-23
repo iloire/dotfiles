@@ -8,6 +8,7 @@ windows:
       - editor:
           - nvim ~/code/lacalmaeduca.com/www-site/
       - yarn:
+          - code -n ~/code/lacalmaeduca.com/www-site/
           - cd ~/code/lacalmaeduca.com/www-site/
           - nvm
           - yarn dev
