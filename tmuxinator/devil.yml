@@ -8,10 +8,11 @@ windows:
   - devil_dev:
       layout: main-horizontal
       panes:
-      - editor:
-          - nvim ~/code/theflyingdevil.com/
+      - git:
+          - cd ~/code/theflyingdevil.com/
+          - git st
       - yarn:
           - code -n ~/code/theflyingdevil.com/
           - cd ~/code/theflyingdevil.com/
           - nvm
-          - yarn start
+          - yarn && yarn dev

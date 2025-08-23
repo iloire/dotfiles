@@ -6,9 +6,10 @@ windows:
       layout: main-horizontal
       panes:
       - editor:
-          - nvim ~/code/lacalmaeduca.com/www-site/
+          - cd ~/code/lacalmaeduca.com/www-site/
+          - git st
       - yarn:
           - code -n ~/code/lacalmaeduca.com/www-site/
           - cd ~/code/lacalmaeduca.com/www-site/
           - nvm
-          - yarn dev
+          - yarn && yarn dev
