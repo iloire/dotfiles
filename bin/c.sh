@@ -8,6 +8,7 @@ declare -a COMMANDS=(
     "calma:Opens lacalmaeduca.com project:$HOME/code/lacalmaeduca.com/www-site"
     "dotfiles:Opens dotfiles directory:$HOME/dotfiles"
     "hosts:Opens hosts file:/etc/hosts"
+    "ansible:Opens ansible directory:$HOME/code/ansible-recipes"
 )
 
 show_help() {
