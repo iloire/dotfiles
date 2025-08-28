@@ -6,6 +6,7 @@
 # Command definitions: "command:description:path"
 declare -a COMMANDS=(
     "calma:Opens lacalmaeduca.com project:$HOME/code/lacalmaeduca.com/www-site"
+    "devil:Opens theflyingdevil.com project:$HOME/code/theflyingdevil.com"
     "dotfiles:Opens dotfiles directory:$HOME/dotfiles"
     "hosts:Opens hosts file:/etc/hosts"
     "ansible:Opens ansible directory:$HOME/code/ansible-recipes"
