@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Set PATH for cron environment
+PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH
+
 # Configuration
 CONFIG_FILE="$HOME/github_sync.conf"  # Config file in home directory
 LOG_FILE="$HOME/sync_log.txt"
