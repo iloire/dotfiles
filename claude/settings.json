@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git,ls,cat,grep,find,mkdir,touch,echo)",
+      "Edit(./*)",
+      "Read(./*)",
+      "Write(./*)",
+      "Glob(./*)",
+      "Grep(./*)"
+    ],
+    "deny": [
+      "Bash(rm,curl,wget,sudo,apt,pip,brew)",
+      "Delete(*)",
+      "Edit(/etc/*,/usr/*,/var/*,~/.ssh/*,~/.bash*}",
+      "Write(/etc/*,/usr/*,/var/*,~/.ssh/*,~/.bash*)",
+      "Read(/etc/*,/usr/*,/var/*,~/.ssh/*,~/.bash*)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+    "CLAUDE_CODE_VERBOSE": "1"
+  },
+  "hooks": {
+    "PreToolUse": "echo 'Executing tool: $CLAUDE_TOOL_NAME' >> claude_log.txt",
+    "PostToolUse": "echo 'Tool completed: $CLAUDE_TOOL_NAME' >> claude_log.txt"
+  },
+  "ignorePatterns": [
+    "node_modules",
+    ".git",
+    "*.log",
+    "*.tmp"
+  ],
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem", "./"],
+      "paths": ["./*"]
+    }
+  }
+}
