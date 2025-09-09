@@ -26,6 +26,8 @@ git remote remove origin
 
 echo "Project '$PROJECT_NAME' created successfully!"
 echo "Next steps:"
-echo "  cd $PROJECT_NAME"
 echo "  # Set up your new origin:"
 echo "  # git remote add origin <your-new-repo-url>"
+
+# Change to the new directory in the parent shell
+exec bash -c "cd '$PWD' && exec bash"
