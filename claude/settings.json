@@ -11,7 +11,7 @@
     "deny": [
       "Bash(rm,curl,wget,sudo,apt,pip,brew)",
       "Delete(*)",
-      "Edit(/etc/*,/usr/*,/var/*,~/.ssh/*,~/.bash*}",
+      "Edit(/etc/*,/usr/*,/var/*,~/.ssh/*,~/.bash*)",
       "Write(/etc/*,/usr/*,/var/*,~/.ssh/*,~/.bash*)",
       "Read(/etc/*,/usr/*,/var/*,~/.ssh/*,~/.bash*)"
     ]
@@ -21,8 +21,28 @@
     "CLAUDE_CODE_VERBOSE": "1"
   },
   "hooks": {
-    "PreToolUse": "echo 'Executing tool: $CLAUDE_TOOL_NAME' >> claude_log.txt",
-    "PostToolUse": "echo 'Tool completed: $CLAUDE_TOOL_NAME' >> claude_log.txt"
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"Executing tool: ${CLAUDE_TOOL_NAME}\" >> ~/claude_log.txt"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"Tool completed: ${CLAUDE_TOOL_NAME}\" >> ~/claude_log.txt"
+          }
+        ]
+      }
+    ]
   },
   "ignorePatterns": [
     "node_modules",
@@ -33,8 +53,13 @@
   "mcpServers": {
     "filesystem": {
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-filesystem", "./"],
-      "paths": ["./*"]
+      "args": [
+        "@modelcontextprotocol/server-filesystem",
+        "./"
+      ],
+      "paths": [
+        "./*"
+      ]
     }
   }
 }
