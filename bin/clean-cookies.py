@@ -18,7 +18,27 @@ import sys
 import datetime
 import re
 import glob
+import argparse
 from sys import platform
+
+# Parse command line arguments
+parser = argparse.ArgumentParser(description='Clean non-whitelisted cookies from Chrome')
+parser.add_argument('--clean', action='store_true', help='Actually remove cookies (default is dry run)')
+parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
+args = parser.parse_args()
+
+# Global verbose flag
+verbose = args.verbose
+
+# Output functions
+def info(message):
+    """Print informational messages only in verbose mode"""
+    if verbose:
+        print(message)
+
+def error(message):
+    """Always print error messages to stderr"""
+    print(message, file=sys.stderr)
 
 # Check for a specific file in the user's home directory
 stop_file = os.path.expanduser("~/stop_cookie_cleaning.txt")
@@ -26,7 +46,7 @@ if os.path.exists(stop_file):
     sys.exit(0)
 
 home_dir = os.path.expanduser('~')
-run_clean = (len(sys.argv)> 1 and sys.argv[1] == '--clean')
+run_clean = args.clean
 whitelist_dir = f'{home_dir}/myconfig/cookies-whitelist.txt'
 log_file = f'{home_dir}/cookies-whitelist-log.log'
 
@@ -91,61 +111,61 @@ def remove_cookies_hosts(db_path, cookie_hosts_to_remove):
     conn.close()
 
 if not os.path.exists(whitelist_dir):
-    print(f'no whitelist file found on {whitelist_dir}')
-    quit()
+    error(f'ERROR: no whitelist file found on {whitelist_dir}')
+    sys.exit(1)
 
 with open(whitelist_dir) as f:
     white_listed_lines = f.read().splitlines()
 
 chrome_profiles = get_all_db_paths()
 if not chrome_profiles:
-    print('No Chrome profiles found')
-    quit()
+    error('ERROR: No Chrome profiles found')
+    sys.exit(1)
 
-print(f"Found {len(chrome_profiles)} Chrome profiles")
+info(f"Found {len(chrome_profiles)} Chrome profiles")
 
 total_deleted = 0
 total_kept = 0
 
 for profile_name, db_path in chrome_profiles:
-    print(f"\nProcessing profile: {profile_name}")
-    
+    info(f"\nProcessing profile: {profile_name}")
+
     if not os.path.exists(db_path):
-        print(f'  Database file not found: {db_path}')
+        error(f'ERROR: Database file not found: {db_path}')
         continue
-    
+
     try:
         cookie_host_list = get_cookie_host_list(db_path)
-        print(f"  Found {len(cookie_host_list)} cookie hosts")
-        
+        info(f"  Found {len(cookie_host_list)} cookie hosts")
+
         cookies_to_keep, cookie_hosts_to_remove = filter_strings(cookie_host_list, white_listed_lines)
-        
-        print(f"  Cookies to keep: {len(cookies_to_keep)}")
-        print(f"  Cookies to remove: {len(cookie_hosts_to_remove)}")
-        
+
+        info(f"  Cookies to keep: {len(cookies_to_keep)}")
+        info(f"  Cookies to remove: {len(cookie_hosts_to_remove)}")
+
         if run_clean:
             if cookie_hosts_to_remove:
                 remove_cookies_hosts(db_path, cookie_hosts_to_remove)
-                print(f"  ✓ Removed {len(cookie_hosts_to_remove)} cookie hosts")
+                info(f"  ✓ Removed {len(cookie_hosts_to_remove)} cookie hosts")
             else:
-                print(f"  ✓ No cookies to remove")
+                info(f"  ✓ No cookies to remove")
             append_to_log(log_file, profile_name, cookie_hosts_to_remove, cookies_to_keep)
         else:
-            print(f"  --- DRY RUN: Would remove {len(cookie_hosts_to_remove)} cookie hosts")
+            info(f"  --- DRY RUN: Would remove {len(cookie_hosts_to_remove)} cookie hosts")
             if cookie_hosts_to_remove:
-                print(f"  --- Domains to be removed: {', '.join(cookie_hosts_to_remove[:5])}" + ("..." if len(cookie_hosts_to_remove) > 5 else ""))
-        
+                info(f"  --- Domains to be removed: {', '.join(cookie_hosts_to_remove[:5])}" + ("..." if len(cookie_hosts_to_remove) > 5 else ""))
+
         total_deleted += len(cookie_hosts_to_remove)
         total_kept += len(cookies_to_keep)
-        
+
     except Exception as e:
-        print(f"  Error processing profile {profile_name}: {str(e)}")
+        error(f"ERROR: Error processing profile {profile_name}: {str(e)}")
         continue
 
-print(f"\n=== Summary ===")
-print(f"Processed {len(chrome_profiles)} profiles")
-print(f"Total cookies to keep: {total_kept}")
-print(f"Total cookies {'removed' if run_clean else 'to remove'}: {total_deleted}")
+info(f"\n=== Summary ===")
+info(f"Processed {len(chrome_profiles)} profiles")
+info(f"Total cookies to keep: {total_kept}")
+info(f"Total cookies {'removed' if run_clean else 'to remove'}: {total_deleted}")
 
 if not run_clean:
-    print("\nRun with --clean flag to actually remove cookies")
+    info("\nRun with --clean flag to actually remove cookies")
