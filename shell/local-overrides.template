@@ -1,0 +1,40 @@
+# Local Environment Variables Template
+# Copy this file to 'local-overrides' and fill in your values
+# This file is gitignored and should contain sensitive information
+
+# ==============================================================================
+# REQUIRED VARIABLES
+# ==============================================================================
+
+# Email address for notifications (SES, disk space alerts, etc.)
+# Used by: bin/send-ses.sh, bin/low-space-monitor.sh
+export ADMIN_EMAIL="your-email@example.com"
+
+# ==============================================================================
+# OPTIONAL VARIABLES
+# ==============================================================================
+
+# AWS Configuration (if using AWS SES for email notifications)
+# Note: AWS credentials should be in ~/.aws/credentials under [email] profile
+# export AWS_DEFAULT_REGION="us-east-1"
+
+# Custom PATH additions (if needed beyond defaults)
+# export PATH="$HOME/custom/bin:$PATH"
+
+# Development Tools (uncomment and modify as needed)
+# export GOPATH="$HOME/code/gocode"
+# export JAVA_HOME="$HOME/code/jdk-22.0.2.jdk/Contents/Home"
+# export NVM_DIR="$HOME/.nvm"
+
+# Editor preference (if not using default nvim)
+# export EDITOR="vim"
+
+# Claude Code settings (uncomment to override defaults)
+# export CLAUDE_CODE_ENABLE_TELEMETRY="0"
+# export CLAUDE_CODE_VERBOSE="1"
+
+# Homebrew settings
+# export HOMEBREW_NO_ANALYTICS=1
+
+# Backup directory (for backup-ubuntu-home.sh)
+# export BACKUP_DIR_ENV="/path/to/backup/directory"
