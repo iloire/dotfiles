@@ -28,6 +28,12 @@ info() {
     fi
 }
 
+alert() {
+    if [ "$VERBOSE" = true ]; then
+        echo "ALERT: $1"
+    fi
+}
+
 error() {
     echo "ERROR: $1" >&2
 }
@@ -81,7 +87,7 @@ $DF_CMD -H | grep -vE '^Filesystem|tmpfs|cdrom' | awk '{ print $5 " " $1 }' | wh
 		current_date="$($DATE_CMD)"
 		msg="Running out of space \"$partition ($usep%)\" on $hostname_value as on $current_date"
 		echo "$msg" >>$LOGFILENAME
-		error "Disk space alert: $partition is at $usep% (threshold: $ALERT%)"
+		alert "Disk space: $partition is at $usep% (threshold: $ALERT%)"
 		info "Sending alert email..."
 		$HOME/dotfiles/bin/send-ses.sh "Alert on $hostname_value: Almost out of disk space $usep% (ALERT AT $ALERT%)" "$msg"
 		if [ $? -eq 0 ]; then
