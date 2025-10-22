@@ -80,6 +80,11 @@ $DF_CMD -H | grep -vE '^Filesystem|tmpfs|cdrom' | awk '{ print $5 " " $1 }' | wh
 
 	info "  $partition: $usep% used"
 
+	# Skip devfs on macOS (always shows 100%)
+	if [[ "$partition" == "devfs" ]]; then
+		continue
+	fi
+
 	# Check if usep is a valid integer (handle macOS df output differences)
 	if [[ "$usep" =~ ^[0-9]+$ ]] && [ $usep -ge $ALERT ]; then
 		alert_triggered=true
