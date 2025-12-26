@@ -3,3 +3,4 @@
 *.swp
 shell/local-overrides
 xdg/applications/mimeinfo.cache
+.claude/

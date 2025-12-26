@@ -1,0 +1,92 @@
+{
+    "remote.defaultExtensionsIfInstalledLocally": [
+        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github"
+    ],
+    "javascript.updateImportsOnFileMove.enabled": "always",
+    "editor.minimap.enabled": false,
+    "terminal.integrated.enableMultiLinePasteWarning": "never",
+    "git.enableSmartCommit": true,
+    "git.openRepositoryInParentFolders": "never",
+    "files.exclude": {
+        ".next": true,
+        "built": true,
+        "coverage": true,
+        "dist": true,
+        "node_modules": true,
+        ".deploy": true
+    },
+    "editor.fontSize": 12,
+    "window.zoomLevel": -1,
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "diffEditor.renderSideBySide": false,
+    "claudeCode.preferredLocation": "panel",
+    // Productivity & Code Quality
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "files.autoSave": "onFocusChange",
+    "editor.stickyScroll.enabled": true,
+    "editor.linkedEditing": true,
+    "editor.bracketPairColorization.enabled": true,
+    "editor.inlayHints.enabled": "onUnlessPressed",
+    "typescript.inlayHints.parameterNames.enabled": "all",
+    "typescript.inlayHints.variableTypes.enabled": true,
+    // Terminal & Shell
+    "terminal.integrated.scrollback": 10000,
+    "terminal.integrated.copyOnSelection": true,
+    "terminal.integrated.cursorBlinking": true,
+    "terminal.integrated.enablePersistentSessions": true,
+    // Performance & Focus
+    "breadcrumbs.enabled": true,
+    "workbench.activityBar.location": "top",
+    "editor.largeFileOptimizations": true,
+    "search.maxResults": 20000,
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/.git/objects/**": true,
+        "**/dist/**": true,
+        "**/.next/**": true
+    },
+    // Language-Specific
+    "[python]": {
+        "editor.rulers": [
+            88
+        ],
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[markdown]": {
+        "editor.wordWrap": "on",
+        "editor.quickSuggestions": false
+    },
+    // Debugging & Testing
+    "debug.toolBarLocation": "docked",
+    "testing.automaticallyOpenPeekView": "failureVisible",
+    "debug.inlineValues": "on",
+    // Hidden Gems
+    "zenMode.hideLineNumbers": false,
+    "zenMode.centerLayout": true,
+    "timeline.showView": true,
+    "editor.smartSelect.selectSubwords": true,
+    "emmet.triggerExpansionOnTab": true,
+    "emmet.includeLanguages": {
+        "javascript": "javascriptreact"
+    },
+    // Hide Copilot chat (using Claude Code instead)
+    "github.copilot.chat.localeOverride": "en",
+    "chat.commandCenter.enabled": false,
+    "github.copilot.chat.agent.enabled": false,
+    "testing.openTesting": "neverOpen",
+    "terminal.integrated.launchTerminalOnStartup": false
+}
