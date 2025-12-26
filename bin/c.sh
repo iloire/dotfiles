@@ -10,6 +10,7 @@ declare -a COMMANDS=(
     "dotfiles:Opens dotfiles directory:$HOME/dotfiles"
     "hosts:Opens hosts file:/etc/hosts"
     "ansible:Opens ansible directory:$HOME/code/ansible-recipes"
+    "nas:Opens NAS-peque repos (ansible-nas + inventory):$HOME/code/NAS-peque/ansible-nas:$HOME/code/NAS-peque/my-ansible-nas-inventory"
 )
 
 show_help() {
@@ -29,9 +30,11 @@ fi
 # Find and execute command
 found=false
 for cmd in "${COMMANDS[@]}"; do
-    IFS=':' read -r name desc path <<< "$cmd"
+    IFS=':' read -r name desc paths <<< "$cmd"
     if [ "$1" = "$name" ]; then
-        code -n "$path"
+        # Split paths by colon and open all of them
+        IFS=':' read -ra path_array <<< "$paths"
+        code -n "${path_array[@]}"
         found=true
         break
     fi
