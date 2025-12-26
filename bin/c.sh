@@ -12,6 +12,7 @@ declare -a COMMANDS=(
     "ansible:Opens ansible directory:$HOME/code/ansible-recipes"
     "nas:Opens NAS-peque repos (ansible-nas + inventory):$HOME/code/NAS-peque/ansible-nas:$HOME/code/NAS-peque/my-ansible-nas-inventory"
     "n8n:Opens my-n8n project:$HOME/code/my-n8n"
+    "notes:Opens notes directory:$HOME/notes"
 )
 
 show_help() {
