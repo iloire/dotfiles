@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Kraken Desktop
+Exec=kraken_desktop %u
+Icon=kraken
+Comment=Build your own real-time crypto market dashboards with any combination of candle charts, order books, time & sales feeds, and more.
+Terminal=false
+MimeType=x-scheme-handler/kraken;
