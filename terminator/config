@@ -14,6 +14,7 @@
     font = Ubuntu Mono 14
     foreground_color = "#839496"
     show_titlebar = False
+    scrollback_lines = 2000
     use_system_font = False
 [layouts]
   [[default]]
