@@ -4,3 +4,4 @@
 shell/local-overrides
 xdg/applications/mimeinfo.cache
 .claude/
+settings.local.json

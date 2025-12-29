@@ -48,6 +48,7 @@
 ### Code Maintenance
 - Remove unused files, imports, and code during feature reorganization
 - Update all references (e.g., routes, links) when moving features between sections
+- Never commit `.cloude/settings.local.json` files—add to `.gitignore` and remove from repo if present
 
 ### Type Safety
 - Enforce strict TypeScript with `noImplicitAny` and `strictNullChecks`
@@ -110,20 +111,20 @@ export const Env = parsed.data;
 ## Technical Stack
 
 ### Core Technologies
-| Category | Technology |
-|----------|------------|
-| Framework | Next.js with App Router |
-| Language | TypeScript (strict mode) |
-| Database (simple) | SQLite with Prisma ORM |
-| Database (complex) | PostgreSQL or MongoDB |
-| UI Components | shadcn/ui (Radix UI) |
-| Styling | Tailwind CSS with CSS variables |
-| Forms | React Hook Form + Zod |
-| State | React hooks (`useState`, `useReducer`) |
-| Dates | date-fns |
-| Notifications | React-Toastify |
-| Icons | Lucide React |
-| Charts | Chart.js |
+| Category           | Technology                             |
+| ------------------ | -------------------------------------- |
+| Framework          | Next.js with App Router                |
+| Language           | TypeScript (strict mode)               |
+| Database (simple)  | SQLite with Prisma ORM                 |
+| Database (complex) | PostgreSQL or MongoDB                  |
+| UI Components      | shadcn/ui (Radix UI)                   |
+| Styling            | Tailwind CSS with CSS variables        |
+| Forms              | React Hook Form + Zod                  |
+| State              | React hooks (`useState`, `useReducer`) |
+| Dates              | date-fns                               |
+| Notifications      | React-Toastify                         |
+| Icons              | Lucide React                           |
+| Charts             | Chart.js                               |
 
 ### Database Schema Patterns
 - Auto-incrementing primary keys
