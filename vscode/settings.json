@@ -16,7 +16,6 @@
         "node_modules": true,
         ".deploy": true
     },
-    "editor.fontSize": 12,
     "window.zoomLevel": -1,
     "typescript.updateImportsOnFileMove.enabled": "always",
     "diffEditor.renderSideBySide": false,
@@ -68,7 +67,11 @@
     },
     "[markdown]": {
         "editor.wordWrap": "on",
-        "editor.quickSuggestions": false
+        "editor.quickSuggestions": {
+            "comments": "off",
+            "strings": "off",
+            "other": "off"
+        }
     },
     // Debugging & Testing
     "debug.toolBarLocation": "docked",
@@ -87,6 +90,14 @@
     "github.copilot.chat.localeOverride": "en",
     "chat.commandCenter.enabled": false,
     "github.copilot.chat.agent.enabled": false,
+    "chat.editor.wordWrap": "off",
+    "workbench.panel.chat.defaultPosition": "bottom",
+    "github.copilot.chat.welcomeMessage": "never",
     "testing.openTesting": "neverOpen",
-    "terminal.integrated.launchTerminalOnStartup": false
+    "terminal.integrated.launchTerminalOnStartup": false,
+    "testing.automaticallyOpenTestResults": "neverOpen",
+    "workbench.secondarySideBar.defaultVisibility": "hidden",
+    "chat.detectParticipant.enabled": false,
+    "editor.fontVariations": false,
+    "editor.fontSize": 15
 }
