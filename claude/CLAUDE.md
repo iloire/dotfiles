@@ -1,16 +1,13 @@
 # Development Guidelines
 
 ## Development Workflow
-### Planning & Tracking
-- **TODO.md**: The agent must autonomously pick up and execute tasks from the TODO.md file in order of priority, following the instructions described in the file itself.
-- **Commit frequently**: Make incremental commits for better version history.
-- **Test thoroughly**: Write unit tests (e.g., Jest), integration tests (e.g., for API interactions), and end-to-end tests (e.g., Cypress) for navigation and UI flows.
 
 ### Documentation to be maintained
-- **CHANGELOG.md**: Log changes in reverse-chronological order with UTC timestamps in `YYYY-MM-DD HH:MM` format (e.g., `2025-08-31 14:30 UTC`).
-- **DOCS.md**: Central documentation covering project architecture.
-- **SETUP.md**: Brief documentation to get the project setup.
-- **API.md**: Dedicated API reference with endpoints, request/response formats, and examples (e.g., `POST /users - Request: { "name": string } - Response: { "id": number }`).
+All documentation files should be placed in the `docs/` folder at the project root.
+- **docs/CHANGELOG.md**: Log changes in reverse-chronological order with UTC timestamps in `YYYY-MM-DD HH:MM` format (e.g., `2025-08-31 14:30 UTC`).
+- **docs/DOCS.md**: Central documentation covering project architecture.
+- **docs/SETUP.md**: Brief documentation to get the project setup.
+- **docs/API.md**: Dedicated API reference with endpoints, request/response formats, and examples (e.g., `POST /users - Request: { "name": string } - Response: { "id": number }`).
 - Commit changes after each task with detailed messages following the commit guidelines.
 
 ## Commit Message Guidelines
@@ -35,7 +32,7 @@
 
 
 ### Security Compliance Guidelines
-- **Environment Variables**: Use for configuration; never commit secrets.
+- **Environment Variables**: Use for configuration. Use git-crypt to encrypt `.env` files so they can be safely committed to the repository.
 - **Path Validation**: Implement strict validation to prevent path traversal attacks.
 - **Hardcoded credentials**: Forbidden—use environment variables or secrets management (e.g., AWS Secrets Manager, HashiCorp Vault).
 - **Input sanitization**: Use libraries like DOMPurify for HTML or validator.js for strings to prevent injection attacks.
@@ -44,6 +41,33 @@
 - **Least privilege**: Apply to file and process operations (e.g., restrict file access to read-only where possible).
 - **Logging**: Log sensitive operations, excluding sensitive data (e.g., log "User login attempted" but not passwords).
 - **Permissions**: Check system-level permissions before accessing protected services or paths.
+
+### Environment Variable Management
+- **No direct `process.env` access**: Never access `process.env` directly throughout the codebase. Instead, create a centralized `Env` class or module (e.g., `lib/env.ts`) that abstracts all environment variable access.
+- **Fail fast on startup**: Validate all required environment variables immediately when the server starts. Throw an error if any required variable is missing or invalid—do not wait until the variable is accessed at runtime.
+- **Type-safe configuration**: The `Env` class should provide typed getters for each variable (e.g., `Env.databaseUrl`, `Env.apiKey`) with proper TypeScript types.
+- **Validation with Zod**: Use Zod schemas to validate environment variables at startup, ensuring correct types and formats.
+- **Example structure**:
+  ```typescript
+  // lib/env.ts
+  import { z } from 'zod';
+
+  const envSchema = z.object({
+    DATABASE_URL: z.string().url(),
+    API_KEY: z.string().min(1),
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    PORT: z.coerce.number().default(3000),
+  });
+
+  const parsed = envSchema.safeParse(process.env);
+  if (!parsed.success) {
+    console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);
+    throw new Error('Invalid environment variables');
+  }
+
+  export const Env = parsed.data;
+  ```
+- **Import early**: Import the `Env` module at the application entry point to ensure validation runs before any other code executes.
 
 ## Design Philosophy Principles
 ### KISS (Keep It Simple, Stupid)
@@ -113,6 +137,31 @@
 - **Response Format**: Use `{ success: boolean, data?: any, error?: string }` pattern.
 - **Error Handling**: Use try-catch with user-friendly error messages (e.g., `Failed to fetch user: Invalid ID`).
 - **Validation**: Apply Zod schema validation on both client and server.
+- **BaseController Pattern**: Create a `BaseController` class (e.g., `lib/base-controller.ts`) that all API route handlers extend or use. This controller encapsulates:
+  - **Security**: Authentication checks, authorization, rate limiting, and CSRF protection.
+  - **Logging**: Automatic request/response logging with correlation IDs.
+  - **Caching**: Common caching strategies and cache invalidation.
+  - **Error handling**: Consistent error formatting and status codes.
+  - **Request parsing**: Standardized body parsing and validation.
+  ```typescript
+  // lib/base-controller.ts
+  export abstract class BaseController {
+    protected async handle(req: Request, handler: () => Promise<Response>): Promise<Response> {
+      const correlationId = crypto.randomUUID();
+      try {
+        this.logRequest(req, correlationId);
+        await this.authenticate(req);
+        const response = await handler();
+        this.logResponse(response, correlationId);
+        return response;
+      } catch (error) {
+        return this.handleError(error, correlationId);
+      }
+    }
+    protected abstract authenticate(req: Request): Promise<void>;
+    // ... logging, caching, error handling methods
+  }
+  ```
 
 ### File Organization
 ```
