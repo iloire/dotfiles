@@ -7,6 +7,7 @@
 - [Technical Stack](#technical-stack)
 - [Architecture Patterns](#architecture-patterns)
 - [UI/UX Patterns](#uiux-patterns)
+- [Frontend Aesthetics](#frontend-aesthetics)
 - [Internationalization](#internationalization-i18n)
 - [Development Workflow](#development-workflow)
 - [Deployment](#deployment)
@@ -239,6 +240,47 @@ Encapsulates: authentication, authorization, rate limiting, CSRF protection, log
 
 ### HTML Entities
 - Use entities (e.g., `&apos;` for `'`) to avoid `react/no-unescaped-entities` errors
+
+---
+
+## Frontend Aesthetics
+
+Avoid generic "AI slop" aesthetics. Create distinctive frontends that surprise and delight.
+
+### Typography
+- Choose beautiful, unique, and interesting fonts
+- Avoid generic fonts: Arial, Inter, Roboto, system fonts
+- Avoid overused "creative" fonts: Space Grotesk
+- Select distinctive choices that elevate the design
+
+### Color & Theme
+- Commit to a cohesive aesthetic
+- Use CSS variables for consistency
+- Dominant colors with sharp accents outperform timid, evenly-distributed palettes
+- Draw inspiration from IDE themes and cultural aesthetics
+- Avoid cliched color schemes (particularly purple gradients on white backgrounds)
+- Vary between light and dark themes based on context
+
+### Motion & Animation
+- Use animations for effects and micro-interactions
+- Prioritize CSS-only solutions for HTML
+- Use Motion library for React when available
+- Focus on high-impact moments: one well-orchestrated page load with staggered reveals (`animation-delay`) creates more delight than scattered micro-interactions
+
+### Backgrounds
+- Create atmosphere and depth rather than defaulting to solid colors
+- Layer CSS gradients
+- Use geometric patterns
+- Add contextual effects that match the overall aesthetic
+
+### Anti-Patterns to Avoid
+- Overused font families (Inter, Roboto, Arial, system fonts, Space Grotesk)
+- Cliched color schemes (purple gradients on white)
+- Predictable layouts and component patterns
+- Cookie-cutter design lacking context-specific character
+- Converging on common "safe" choices across generations
+
+Think outside the box. Make unexpected choices that feel genuinely designed for the specific context.
 
 ---
 
