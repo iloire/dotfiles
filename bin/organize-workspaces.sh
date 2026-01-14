@@ -1,0 +1,241 @@
+#!/bin/bash
+#
+# Organizes windows across workspaces based on JSON config
+# Requires: wmctrl, jq
+# Install: sudo apt install wmctrl jq
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${1:-$SCRIPT_DIR/organize-workspaces.json}"
+
+for cmd in wmctrl jq; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is required. Install with: sudo apt install $cmd"
+        exit 1
+    fi
+done
+
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "Error: Config file not found: $CONFIG_FILE"
+    exit 1
+fi
+
+echo "Loading config from: $CONFIG_FILE"
+
+# Parse monitors from config
+declare -A MONITOR_X MONITOR_Y MONITOR_W MONITOR_H
+while IFS= read -r line; do
+    name=$(echo "$line" | jq -r '.name')
+    MONITOR_X[$name]=$(echo "$line" | jq -r '.x')
+    MONITOR_Y[$name]=$(echo "$line" | jq -r '.y')
+    MONITOR_W[$name]=$(echo "$line" | jq -r '.width')
+    MONITOR_H[$name]=$(echo "$line" | jq -r '.height')
+done < <(jq -c '.monitors[]' "$CONFIG_FILE")
+
+# Parse positions from config
+declare -A POS_X POS_Y POS_W POS_H
+while IFS= read -r line; do
+    name=$(echo "$line" | jq -r '.key')
+    POS_X[$name]=$(echo "$line" | jq -r '.value.x')
+    POS_Y[$name]=$(echo "$line" | jq -r '.value.y')
+    POS_W[$name]=$(echo "$line" | jq -r '.value.width')
+    POS_H[$name]=$(echo "$line" | jq -r '.value.height')
+done < <(jq -c '.positions | to_entries[] | {key: .key, value: .value}' "$CONFIG_FILE")
+
+# Parse chrome profiles
+declare -A CHROME_PROFILES
+while IFS= read -r line; do
+    key=$(echo "$line" | jq -r '.key')
+    value=$(echo "$line" | jq -r '.value')
+    CHROME_PROFILES[$key]="$value"
+done < <(jq -c '.chrome_profiles | to_entries[]' "$CONFIG_FILE")
+
+# Get monitor name from alias (left, center, right)
+get_monitor_name() {
+    local alias="$1"
+    jq -r ".monitors.$alias.name" "$CONFIG_FILE"
+}
+
+# Calculate absolute position
+calc_position() {
+    local monitor_alias="$1"
+    local position="$2"
+
+    local mon_name
+    mon_name=$(get_monitor_name "$monitor_alias")
+
+    local mon_x=${MONITOR_X[$mon_name]}
+    local mon_y=${MONITOR_Y[$mon_name]}
+    local mon_w=${MONITOR_W[$mon_name]}
+    local mon_h=${MONITOR_H[$mon_name]}
+
+    local pos_x=${POS_X[$position]}
+    local pos_y=${POS_Y[$position]}
+    local pos_w=${POS_W[$position]}
+    local pos_h=${POS_H[$position]}
+
+    # Calculate absolute coordinates
+    local abs_x=$(echo "$mon_x + ($mon_w * $pos_x)" | bc | cut -d. -f1)
+    local abs_y=$(echo "$mon_y + ($mon_h * $pos_y)" | bc | cut -d. -f1)
+    local abs_w=$(echo "$mon_w * $pos_w" | bc | cut -d. -f1)
+    local abs_h=$(echo "$mon_h * $pos_h" | bc | cut -d. -f1)
+
+    echo "$abs_x,$abs_y,$abs_w,$abs_h"
+}
+
+# Track used windows to avoid reusing
+declare -A USED_VSCODE_WINDOWS
+declare -A USED_CHROME_WINDOWS
+declare -A USED_TERMINAL_WINDOWS
+
+# Get VS Code window for a specific folder, or create one
+get_vscode_window() {
+    local folder="${1:-}"
+    local folder_name=""
+    local win
+
+    if [[ -n "$folder" && "$folder" != "null" ]]; then
+        folder_name=$(basename "$folder")
+
+        # First, try to find existing window with this folder open
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$folder_name" | awk '{print $1}' | head -1)
+        if [[ -n "$win" && -z "${USED_VSCODE_WINDOWS[$win]:-}" ]]; then
+            USED_VSCODE_WINDOWS[$win]=1
+            echo "$win"
+            return 0
+        fi
+
+        # Not found, open the folder in a new window
+        echo "Opening VS Code with folder: $folder_name..." >&2
+        code --new-window "$folder" &>/dev/null &
+        sleep 3
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$folder_name" | awk '{print $1}' | head -1)
+        if [[ -n "$win" ]]; then
+            USED_VSCODE_WINDOWS[$win]=1
+            echo "$win"
+            return 0
+        fi
+    fi
+
+    # No folder specified or couldn't find/create, use any available window
+    while IFS= read -r win; do
+        if [[ -z "${USED_VSCODE_WINDOWS[$win]:-}" ]]; then
+            USED_VSCODE_WINDOWS[$win]=1
+            echo "$win"
+            return 0
+        fi
+    done < <(wmctrl -l | grep -i "Visual Studio Code" | awk '{print $1}')
+
+    # No available window, create one
+    echo "Creating new VS Code window..." >&2
+    code --new-window &>/dev/null &
+    sleep 3
+    win=$(wmctrl -l | grep -i "Visual Studio Code" | tail -1 | awk '{print $1}')
+    if [[ -n "$win" && -z "${USED_VSCODE_WINDOWS[$win]:-}" ]]; then
+        USED_VSCODE_WINDOWS[$win]=1
+        echo "$win"
+    fi
+}
+
+# Get next available Chrome window for profile, or create one
+get_chrome_window() {
+    local profile_alias="$1"
+    local profile_dir="${CHROME_PROFILES[$profile_alias]}"
+
+    # Try to find existing Chrome window
+    local win
+    while IFS= read -r win; do
+        if [[ -z "${USED_CHROME_WINDOWS[$win]:-}" ]]; then
+            USED_CHROME_WINDOWS[$win]=1
+            echo "$win"
+            return 0
+        fi
+    done < <(wmctrl -l | grep -i "Google Chrome$" | awk '{print $1}')
+
+    # No available window, create one with profile
+    echo "Creating new Chrome window (profile: $profile_alias)..." >&2
+    google-chrome --new-window --profile-directory="$profile_dir" &>/dev/null &
+    sleep 2
+    win=$(wmctrl -l | grep -i "Google Chrome$" | tail -1 | awk '{print $1}')
+    if [[ -n "$win" ]]; then
+        USED_CHROME_WINDOWS[$win]=1
+        echo "$win"
+    fi
+}
+
+# Get next available terminal window, or create one
+get_terminal_window() {
+    local win
+    while IFS= read -r win; do
+        if [[ -z "${USED_TERMINAL_WINDOWS[$win]:-}" ]]; then
+            USED_TERMINAL_WINDOWS[$win]=1
+            echo "$win"
+            return 0
+        fi
+    done < <(wmctrl -l | grep -iE "terminal|terminator|konsole|kitty|alacritty" | awk '{print $1}')
+
+    # No available window, create one
+    echo "Creating new terminal window..." >&2
+    gnome-terminal &>/dev/null &
+    sleep 2
+    win=$(wmctrl -l | grep -iE "terminal|terminator|konsole|kitty|alacritty" | tail -1 | awk '{print $1}')
+    if [[ -n "$win" ]]; then
+        USED_TERMINAL_WINDOWS[$win]=1
+        echo "$win"
+    fi
+}
+
+# Process each workspace
+num_workspaces=$(jq '.workspaces | length' "$CONFIG_FILE")
+
+for ((ws_idx = 0; ws_idx < num_workspaces; ws_idx++)); do
+    ws_name=$(jq -r ".workspaces[$ws_idx].name" "$CONFIG_FILE")
+    ws_num=$(jq -r ".workspaces[$ws_idx].workspace" "$CONFIG_FILE")
+
+    echo ""
+    echo "=== $ws_name (workspace $((ws_num + 1))) ==="
+
+    num_windows=$(jq ".workspaces[$ws_idx].windows | length" "$CONFIG_FILE")
+
+    for ((win_idx = 0; win_idx < num_windows; win_idx++)); do
+        app=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].app" "$CONFIG_FILE")
+        monitor=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].monitor" "$CONFIG_FILE")
+        position=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].position" "$CONFIG_FILE")
+
+        # Get window ID
+        win_id=""
+        case "$app" in
+            vscode)
+                folder=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].folder // empty" "$CONFIG_FILE")
+                win_id=$(get_vscode_window "$folder")
+                ;;
+            chrome)
+                profile=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].profile" "$CONFIG_FILE")
+                win_id=$(get_chrome_window "$profile")
+                ;;
+            terminal)
+                win_id=$(get_terminal_window)
+                ;;
+        esac
+
+        if [[ -z "$win_id" ]]; then
+            echo "Warning: Could not get window for $app"
+            continue
+        fi
+
+        # Calculate position
+        coords=$(calc_position "$monitor" "$position")
+        IFS=',' read -r x y w h <<< "$coords"
+
+        # Move to workspace and position
+        wmctrl -i -r "$win_id" -t "$ws_num"
+        wmctrl -i -r "$win_id" -e "0,$x,$y,$w,$h"
+
+        echo "Placed $app on $monitor ($position) -> ${w}x${h}+${x}+${y}"
+    done
+done
+
+echo ""
+echo "Done! Workspaces configured."
