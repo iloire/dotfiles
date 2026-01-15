@@ -60,6 +60,9 @@ get_monitor_name() {
     jq -r ".monitors.$alias.name" "$CONFIG_FILE"
 }
 
+# Get top bar offset from config (default 0)
+TOP_BAR_OFFSET=$(jq -r '.top_bar_offset // 0' "$CONFIG_FILE")
+
 # Calculate absolute position
 calc_position() {
     local monitor_alias="$1"
@@ -78,11 +81,14 @@ calc_position() {
     local pos_w=${POS_W[$position]}
     local pos_h=${POS_H[$position]}
 
-    # Calculate absolute coordinates
+    # Effective monitor height after top bar offset
+    local effective_h=$((mon_h - TOP_BAR_OFFSET))
+
+    # Calculate absolute coordinates (y offset applied, height reduced)
     local abs_x=$(echo "$mon_x + ($mon_w * $pos_x)" | bc | cut -d. -f1)
-    local abs_y=$(echo "$mon_y + ($mon_h * $pos_y)" | bc | cut -d. -f1)
+    local abs_y=$(echo "$mon_y + $TOP_BAR_OFFSET + ($effective_h * $pos_y)" | bc | cut -d. -f1)
     local abs_w=$(echo "$mon_w * $pos_w" | bc | cut -d. -f1)
-    local abs_h=$(echo "$mon_h * $pos_h" | bc | cut -d. -f1)
+    local abs_h=$(echo "$effective_h * $pos_h" | bc | cut -d. -f1)
 
     echo "$abs_x,$abs_y,$abs_w,$abs_h"
 }
@@ -91,6 +97,8 @@ calc_position() {
 declare -A USED_VSCODE_WINDOWS
 declare -A USED_CHROME_WINDOWS
 declare -A USED_TERMINAL_WINDOWS
+declare -A USED_OBSIDIAN_WINDOWS
+declare -A USED_TODO_WINDOWS
 
 # Get VS Code window for a specific folder, or create one
 get_vscode_window() {
@@ -146,7 +154,7 @@ get_chrome_window() {
     local profile_alias="$1"
     local profile_dir="${CHROME_PROFILES[$profile_alias]}"
 
-    # Try to find existing Chrome window
+    # Try to find existing Chrome window that hasn't been used
     local win
     while IFS= read -r win; do
         if [[ -z "${USED_CHROME_WINDOWS[$win]:-}" ]]; then
@@ -154,39 +162,73 @@ get_chrome_window() {
             echo "$win"
             return 0
         fi
-    done < <(wmctrl -l | grep -i "Google Chrome$" | awk '{print $1}')
+    done < <(wmctrl -l | grep -i "Chrome" | awk '{print $1}')
 
     # No available window, create one with profile
     echo "Creating new Chrome window (profile: $profile_alias)..." >&2
     google-chrome --new-window --profile-directory="$profile_dir" &>/dev/null &
-    sleep 2
-    win=$(wmctrl -l | grep -i "Google Chrome$" | tail -1 | awk '{print $1}')
-    if [[ -n "$win" ]]; then
-        USED_CHROME_WINDOWS[$win]=1
-        echo "$win"
-    fi
+    sleep 3
+
+    # Find the newly created window
+    while IFS= read -r win; do
+        if [[ -z "${USED_CHROME_WINDOWS[$win]:-}" ]]; then
+            USED_CHROME_WINDOWS[$win]=1
+            echo "$win"
+            return 0
+        fi
+    done < <(wmctrl -l | grep -i "Chrome" | awk '{print $1}')
 }
 
 # Get next available terminal window, or create one
 get_terminal_window() {
     local win
+    # Match terminals by common patterns: username@hostname, or terminal app names
     while IFS= read -r win; do
         if [[ -z "${USED_TERMINAL_WINDOWS[$win]:-}" ]]; then
             USED_TERMINAL_WINDOWS[$win]=1
             echo "$win"
             return 0
         fi
-    done < <(wmctrl -l | grep -iE "terminal|terminator|konsole|kitty|alacritty" | awk '{print $1}')
+    done < <(wmctrl -l | grep -iE "terminal|terminator|konsole|kitty|alacritty|@.*:" | grep -vi "Visual Studio Code\|Chrome\|Obsidian" | awk '{print $1}')
 
     # No available window, create one
     echo "Creating new terminal window..." >&2
     gnome-terminal &>/dev/null &
     sleep 2
-    win=$(wmctrl -l | grep -iE "terminal|terminator|konsole|kitty|alacritty" | tail -1 | awk '{print $1}')
+    win=$(wmctrl -l | grep -iE "terminal|terminator|konsole|kitty|alacritty|@.*:" | grep -vi "Visual Studio Code\|Chrome\|Obsidian" | tail -1 | awk '{print $1}')
     if [[ -n "$win" ]]; then
         USED_TERMINAL_WINDOWS[$win]=1
         echo "$win"
     fi
+}
+
+# Get next available Obsidian window
+get_obsidian_window() {
+    local win
+    while IFS= read -r win; do
+        if [[ -z "${USED_OBSIDIAN_WINDOWS[$win]:-}" ]]; then
+            USED_OBSIDIAN_WINDOWS[$win]=1
+            echo "$win"
+            return 0
+        fi
+    done < <(wmctrl -l | grep -i "Obsidian" | awk '{print $1}')
+
+    echo "Warning: No Obsidian window found. Please open Obsidian first." >&2
+}
+
+# Get next available TODO app window
+get_todo_window() {
+    local win
+    # Match common TODO apps: Todoist, Microsoft To Do, or window titled "Today"
+    while IFS= read -r win; do
+        if [[ -z "${USED_TODO_WINDOWS[$win]:-}" ]]; then
+            USED_TODO_WINDOWS[$win]=1
+            echo "$win"
+            return 0
+        fi
+    done < <(wmctrl -l | grep -E "todoist|to.do|tasks|todo|Today" | grep -vi "Chrome\|Obsidian" | awk '{print $1}')
+
+    echo "Warning: No TODO app window found. Please open your TODO app first." >&2
 }
 
 # Process each workspace
@@ -219,6 +261,12 @@ for ((ws_idx = 0; ws_idx < num_workspaces; ws_idx++)); do
                 ;;
             terminal)
                 win_id=$(get_terminal_window)
+                ;;
+            obsidian)
+                win_id=$(get_obsidian_window)
+                ;;
+            todo)
+                win_id=$(get_todo_window)
                 ;;
         esac
 
