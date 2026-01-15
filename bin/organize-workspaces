@@ -93,12 +93,17 @@ calc_position() {
     echo "$abs_x,$abs_y,$abs_w,$abs_h"
 }
 
-# Track used windows to avoid reusing
-declare -A USED_VSCODE_WINDOWS
-declare -A USED_CHROME_WINDOWS
-declare -A USED_TERMINAL_WINDOWS
-declare -A USED_OBSIDIAN_WINDOWS
-declare -A USED_TODO_WINDOWS
+# Track used windows to avoid reusing (using temp file for subshell persistence)
+USED_WINDOWS_FILE=$(mktemp)
+trap "rm -f $USED_WINDOWS_FILE" EXIT
+
+is_window_used() {
+    grep -q "^$1$" "$USED_WINDOWS_FILE" 2>/dev/null
+}
+
+mark_window_used() {
+    echo "$1" >> "$USED_WINDOWS_FILE"
+}
 
 # Get VS Code window for a specific folder, or create one
 get_vscode_window() {
@@ -111,8 +116,8 @@ get_vscode_window() {
 
         # First, try to find existing window with this folder open
         win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$folder_name" | awk '{print $1}' | head -1)
-        if [[ -n "$win" && -z "${USED_VSCODE_WINDOWS[$win]:-}" ]]; then
-            USED_VSCODE_WINDOWS[$win]=1
+        if [[ -n "$win" ]] && ! is_window_used "$win"; then
+            mark_window_used "$win"
             echo "$win"
             return 0
         fi
@@ -123,7 +128,7 @@ get_vscode_window() {
         sleep 3
         win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$folder_name" | awk '{print $1}' | head -1)
         if [[ -n "$win" ]]; then
-            USED_VSCODE_WINDOWS[$win]=1
+            mark_window_used "$win"
             echo "$win"
             return 0
         fi
@@ -131,8 +136,8 @@ get_vscode_window() {
 
     # No folder specified or couldn't find/create, use any available window
     while IFS= read -r win; do
-        if [[ -z "${USED_VSCODE_WINDOWS[$win]:-}" ]]; then
-            USED_VSCODE_WINDOWS[$win]=1
+        if ! is_window_used "$win"; then
+            mark_window_used "$win"
             echo "$win"
             return 0
         fi
@@ -143,8 +148,8 @@ get_vscode_window() {
     code --new-window &>/dev/null &
     sleep 3
     win=$(wmctrl -l | grep -i "Visual Studio Code" | tail -1 | awk '{print $1}')
-    if [[ -n "$win" && -z "${USED_VSCODE_WINDOWS[$win]:-}" ]]; then
-        USED_VSCODE_WINDOWS[$win]=1
+    if [[ -n "$win" ]] && ! is_window_used "$win"; then
+        mark_window_used "$win"
         echo "$win"
     fi
 }
@@ -157,8 +162,8 @@ get_chrome_window() {
     # Try to find existing Chrome window that hasn't been used
     local win
     while IFS= read -r win; do
-        if [[ -z "${USED_CHROME_WINDOWS[$win]:-}" ]]; then
-            USED_CHROME_WINDOWS[$win]=1
+        if ! is_window_used "$win"; then
+            mark_window_used "$win"
             echo "$win"
             return 0
         fi
@@ -166,13 +171,13 @@ get_chrome_window() {
 
     # No available window, create one with profile
     echo "Creating new Chrome window (profile: $profile_alias)..." >&2
-    google-chrome --new-window --profile-directory="$profile_dir" &>/dev/null &
-    sleep 3
+    nohup google-chrome --new-window --profile-directory="$profile_dir" > /dev/null 2>&1 &
+    sleep 4
 
     # Find the newly created window
     while IFS= read -r win; do
-        if [[ -z "${USED_CHROME_WINDOWS[$win]:-}" ]]; then
-            USED_CHROME_WINDOWS[$win]=1
+        if ! is_window_used "$win"; then
+            mark_window_used "$win"
             echo "$win"
             return 0
         fi
@@ -184,8 +189,8 @@ get_terminal_window() {
     local win
     # Match terminals by common patterns: username@hostname, or terminal app names
     while IFS= read -r win; do
-        if [[ -z "${USED_TERMINAL_WINDOWS[$win]:-}" ]]; then
-            USED_TERMINAL_WINDOWS[$win]=1
+        if ! is_window_used "$win"; then
+            mark_window_used "$win"
             echo "$win"
             return 0
         fi
@@ -196,8 +201,8 @@ get_terminal_window() {
     gnome-terminal &>/dev/null &
     sleep 2
     win=$(wmctrl -l | grep -iE "terminal|terminator|konsole|kitty|alacritty|@.*:" | grep -vi "Visual Studio Code\|Chrome\|Obsidian" | tail -1 | awk '{print $1}')
-    if [[ -n "$win" ]]; then
-        USED_TERMINAL_WINDOWS[$win]=1
+    if [[ -n "$win" ]] && ! is_window_used "$win"; then
+        mark_window_used "$win"
         echo "$win"
     fi
 }
@@ -206,8 +211,8 @@ get_terminal_window() {
 get_obsidian_window() {
     local win
     while IFS= read -r win; do
-        if [[ -z "${USED_OBSIDIAN_WINDOWS[$win]:-}" ]]; then
-            USED_OBSIDIAN_WINDOWS[$win]=1
+        if ! is_window_used "$win"; then
+            mark_window_used "$win"
             echo "$win"
             return 0
         fi
@@ -221,8 +226,8 @@ get_todo_window() {
     local win
     # Match common TODO apps: Todoist, Microsoft To Do, or window titled "Today"
     while IFS= read -r win; do
-        if [[ -z "${USED_TODO_WINDOWS[$win]:-}" ]]; then
-            USED_TODO_WINDOWS[$win]=1
+        if ! is_window_used "$win"; then
+            mark_window_used "$win"
             echo "$win"
             return 0
         fi
