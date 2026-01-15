@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: files
+# Description: Show disk usage with color-coded sizes
 
 # Function to display usage
 usage() {

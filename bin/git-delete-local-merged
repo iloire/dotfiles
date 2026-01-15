@@ -1,4 +1,6 @@
 #!/bin/sh
+# Category: git
+# Description: Delete local branches merged into HEAD
 #
 # Delete all local branches that have been merged into HEAD. Stolen from
 # our favorite @tekkub:

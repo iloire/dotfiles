@@ -1,4 +1,6 @@
 #!/bin/sh
+# Category: git
+# Description: Show diffstat and count of unpushed commits
 #
 # Show the diffstat of everything you haven't pushed yet.
 

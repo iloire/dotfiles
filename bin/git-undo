@@ -1,4 +1,6 @@
 #!/bin/sh
+# Category: git
+# Description: Undo last commit, keep changes staged
 #
 # Undo your last commit, but don't throw away your changes
 

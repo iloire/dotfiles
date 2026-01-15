@@ -1,4 +1,6 @@
 #!/bin/sh
+# Category: util
+# Description: Quick case-insensitive search using ack
 #
 # Quick search in a directory for a string ($1).
 #

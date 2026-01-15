@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: files
+# Description: Download GPS tracks from Flymaster and organize by date
 #
 # Download GPS tracks from Flymaster and organize into folders by year/month
 #

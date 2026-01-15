@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: cleanup
+# Description: Clean package manager caches (npm, pip, Homebrew, etc.)
 
 # Cross-platform cache cleanup script for macOS and Linux
 # Cleans package manager caches older than specified thresholds

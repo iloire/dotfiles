@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: project
+# Description: Launch VS Code with predefined project folders
 
 # VS Code launcher script with predefined folder mappings
 # Usage: c.sh <folder_name>

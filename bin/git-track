@@ -1,4 +1,6 @@
 #!/bin/sh
+# Category: git
+# Description: Set branch to track origin remote
 #
 # Sets up your branch to track a remote branch. Assumes you mean
 # `origin/$branch-name`.

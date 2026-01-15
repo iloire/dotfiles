@@ -1,0 +1,4 @@
+#!/bin/bash
+# Category: system
+# Description: Change system hostname (macOS)
+sudo scutil --set HostName $1

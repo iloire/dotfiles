@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: files
+# Description: Analyze GRIB2 meteorological files with detailed logging
 # GRIB2 File Inspector
 # Analyzes GRIB2 files in the current directory and provides useful information
 # Displays basic info on screen and logs detailed info to LOG/grib2/ folder

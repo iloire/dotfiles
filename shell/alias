@@ -21,7 +21,7 @@ alias gcontrib='git shortlog -s -n'
 # ls
 alias l="ls -lF ${colorflag}"
 alias la='ls -la'
-alias dun='list-space.sh' # easier to type
+alias dun='list-space' # easier to type
 
 # cd
 alias cdh='cd ~/'
@@ -37,7 +37,7 @@ alias cd....='cd ../../..'
 
 alias d="cd ~/Dropbox"
 alias dl="cd ~/Downloads"
-alias c='c.sh'
+alias c='c'
 alias h='cd ~/'
 
 # docker

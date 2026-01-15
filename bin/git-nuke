@@ -1,4 +1,6 @@
 #!/bin/sh
+# Category: git
+# Description: Delete branch locally and on remote
 #
 # Nukes a branch locally and on the origin remote.
 #

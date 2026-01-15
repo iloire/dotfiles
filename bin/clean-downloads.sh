@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: cleanup
+# Description: Remove old downloads by file type and age
 
 # Downloads cleanup script for macOS and Linux
 # Cleans download directories based on age thresholds

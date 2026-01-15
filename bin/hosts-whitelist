@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: system
+# Description: Manage /etc/hosts blacklist entries
 
 # Paths to the files
 HOSTS_FILE="/etc/hosts"

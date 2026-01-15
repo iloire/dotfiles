@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Category: cleanup
+# Description: Remove non-whitelisted Chrome cookies
 """
 Cleans non white-listed cookies on Chrome
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: files
+# Description: Analyze tar archive contents with size statistics
 
 # Script to analyze tar archive contents and generate directory listing
 # Usage: list-tar-contents.sh <tar_file> <output_log_file>

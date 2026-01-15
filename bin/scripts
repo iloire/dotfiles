@@ -1,0 +1,78 @@
+#!/bin/bash
+# Category: util
+# Description: List all scripts in dotfiles/bin with descriptions
+
+# Colors
+BOLD='\033[1m'
+CYAN='\033[36m'
+YELLOW='\033[33m'
+RESET='\033[0m'
+
+BIN_DIR="$HOME/dotfiles/bin"
+FILTER="${1:-}"
+TMPFILE=$(mktemp)
+
+# Extract category and description from a script
+extract_metadata() {
+    local file="$1"
+    local category="uncategorized"
+    local description=""
+
+    # Read first 20 lines looking for metadata
+    local head_content
+    head_content=$(head -20 "$file" 2>/dev/null)
+
+    # Look for # Category: line
+    if echo "$head_content" | grep -qi "^# Category:"; then
+        category=$(echo "$head_content" | grep -i "^# Category:" | head -1 | sed 's/^# Category:[[:space:]]*//' | tr '[:upper:]' '[:lower:]')
+    fi
+
+    # Look for # Description: line
+    if echo "$head_content" | grep -qi "^# Description:"; then
+        description=$(echo "$head_content" | grep -i "^# Description:" | head -1 | sed 's/^# Description:[[:space:]]*//')
+    else
+        # Fallback: first comment line after shebang (skip empty comments)
+        description=$(echo "$head_content" | grep -v "^#!" | grep "^#" | grep -v "^#$" | grep -v "^# Category:" | head -1 | sed 's/^#[[:space:]]*//')
+    fi
+
+    # If still no description, mark as undocumented
+    [ -z "$description" ] && description="(no description)"
+
+    echo "$category|$description"
+}
+
+# Collect all scripts into temp file: category|name|description
+for file in "$BIN_DIR"/*; do
+    [ -f "$file" ] || continue
+    [ -x "$file" ] || continue
+
+    name=$(basename "$file")
+    [ "$name" = "scripts" ] && continue  # Skip self
+
+    metadata=$(extract_metadata "$file")
+    category=$(echo "$metadata" | cut -d'|' -f1)
+    description=$(echo "$metadata" | cut -d'|' -f2-)
+
+    # Apply filter if provided
+    if [ -n "$FILTER" ]; then
+        if ! echo "$name $category $description" | grep -qi "$FILTER"; then
+            continue
+        fi
+    fi
+
+    echo "$category|$name|$description" >> "$TMPFILE"
+done
+
+# Sort by category then name, and print grouped
+current_category=""
+sort "$TMPFILE" | while IFS='|' read -r category name description; do
+    if [ "$category" != "$current_category" ]; then
+        current_category="$category"
+        upper_category=$(echo "$category" | tr '[:lower:]' '[:upper:]')
+        printf "\n${BOLD}${CYAN}%s${RESET}\n" "$upper_category"
+    fi
+    printf "  ${YELLOW}%-26s${RESET} %s\n" "$name" "$description"
+done
+
+rm -f "$TMPFILE"
+echo ""

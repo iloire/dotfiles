@@ -1,4 +1,6 @@
 #!/bin/sh
+# Category: git
+# Description: Copy current branch name to clipboard
 #
 # Copy the current branch name to the clipboard.
 

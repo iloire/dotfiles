@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: system
+# Description: Send email via AWS SES
 #
 # 1. Create a file like:
 # ~/.aws/credentials

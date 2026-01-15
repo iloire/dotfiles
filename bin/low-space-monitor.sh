@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: system
+# Description: Monitor disk space and send email alerts
 # Purpose: Monitor disk space and send an email alert to $ADMIN_EMAIL
 
 # Parse command line arguments

@@ -1,5 +1,7 @@
-# https://github.com/holman/dotfiles
 #!/bin/sh
+# Category: util
+# Description: Create todo file on Desktop (touch wins)
+# https://github.com/holman/dotfiles
 #
 # Creates something for me to do.
 #

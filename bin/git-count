@@ -1,3 +1,5 @@
 #!/bin/sh
+# Category: git
+# Description: Show total commit count in repository
 
 git rev-list HEAD --count

@@ -1,4 +1,6 @@
 #!/bin/sh
+# Category: git
+# Description: Pull with a short log of changes
 #
 # Usage: git-up
 #        git-reup

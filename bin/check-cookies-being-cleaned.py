@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Category: cleanup
+# Description: Check if cookie cleaning is running on schedule
 import os
 import sys
 

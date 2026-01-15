@@ -1,0 +1,4 @@
+#!/bin/bash
+# Category: files
+# Description: Show disk usage by directory, sorted by size
+du -h --max-depth=1 | sort -h

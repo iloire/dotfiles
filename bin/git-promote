@@ -1,4 +1,6 @@
 #!/bin/sh
+# Category: git
+# Description: Promote local branch to remote tracking branch
 #
 # Promotes a local topic branch to a remote tracking branch of the same name,
 # by pushing and then setting up the git config

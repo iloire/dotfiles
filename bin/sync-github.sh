@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: system
+# Description: Sync local directories with GitHub repositories
 
 # Set PATH for cron environment
 PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH

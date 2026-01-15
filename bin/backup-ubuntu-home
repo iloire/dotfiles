@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: system
+# Description: Backup home directory with selective exclusions
 
 # Backup script for home directory plus system directories with selective exclusions
 

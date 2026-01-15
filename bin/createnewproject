@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: project
+# Description: Create new project from Next.js/Prisma template
 
 set -e
 

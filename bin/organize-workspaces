@@ -1,4 +1,6 @@
 #!/bin/bash
+# Category: files
+# Description: Organize windows across workspaces using JSON config
 #
 # Organizes windows across workspaces based on JSON config
 # Requires: wmctrl, jq

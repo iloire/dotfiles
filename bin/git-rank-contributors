@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# Category: git
+# Description: Rank contributors by total diff size
 
 ## git-rank-contributors: a simple script to trace through the logs and
 ## rank contributors by the total size of the diffs they're responsible for.
