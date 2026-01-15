@@ -1,6 +1,6 @@
 {
   "monitors": {
-    "left": {
+    "top": {
       "name": "DP-2",
       "x": 0,
       "y": 0,
@@ -32,7 +32,8 @@
   },
   "chrome_profiles": {
     "default": "Default",
-    "venturi": "Profile 10"
+    "venturi": "Profile 10",
+    "iloire": "Profile 8"
   },
   "workspaces": [
     {
@@ -41,6 +42,7 @@
       "windows": [
         { "app": "vscode", "folder": "/home/ivan/dotfiles", "monitor": "center", "position": "left-half" },
         { "app": "chrome", "profile": "default", "monitor": "center", "position": "right-half" },
+        { "app": "chrome", "profile": "iloire", "monitor": "top", "position": "full" },
         { "app": "chrome", "profile": "venturi", "monitor": "right", "position": "top-half" },
         { "app": "terminal", "monitor": "right", "position": "bottom-half" }
       ]
