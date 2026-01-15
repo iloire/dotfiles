@@ -97,6 +97,9 @@ calc_position() {
 USED_WINDOWS_FILE=$(mktemp)
 trap "rm -f $USED_WINDOWS_FILE" EXIT
 
+# Persistent state file for Chrome profile -> window mapping
+CHROME_STATE_FILE="/tmp/organize-workspaces-chrome-state"
+
 is_window_used() {
     grep -q "^$1$" "$USED_WINDOWS_FILE" 2>/dev/null
 }
@@ -154,30 +157,75 @@ get_vscode_window() {
     fi
 }
 
-# Get next available Chrome window for profile, or create one
+# Get saved Chrome window for profile from state file
+get_saved_chrome_window() {
+    local profile_alias="$1"
+    if [[ -f "$CHROME_STATE_FILE" ]]; then
+        grep "^$profile_alias:" "$CHROME_STATE_FILE" 2>/dev/null | cut -d: -f2
+    fi
+}
+
+# Save Chrome window for profile to state file
+save_chrome_window() {
+    local profile_alias="$1"
+    local win_id="$2"
+    # Remove old entry for this profile, then add new one
+    if [[ -f "$CHROME_STATE_FILE" ]]; then
+        grep -v "^$profile_alias:" "$CHROME_STATE_FILE" > "${CHROME_STATE_FILE}.tmp" 2>/dev/null || true
+        mv "${CHROME_STATE_FILE}.tmp" "$CHROME_STATE_FILE"
+    fi
+    echo "$profile_alias:$win_id" >> "$CHROME_STATE_FILE"
+}
+
+# Check if a window ID still exists
+window_exists() {
+    local win_id="$1"
+    wmctrl -l | grep -q "^$win_id "
+}
+
+# Get Chrome window for profile, reusing saved window if it still exists
 get_chrome_window() {
     local profile_alias="$1"
     local profile_dir="${CHROME_PROFILES[$profile_alias]}"
 
-    # Try to find existing Chrome window that hasn't been used
+    # First, check if we have a saved window for this profile that still exists
+    local saved_win
+    saved_win=$(get_saved_chrome_window "$profile_alias")
+    if [[ -n "$saved_win" ]] && window_exists "$saved_win" && ! is_window_used "$saved_win"; then
+        echo "Reusing existing Chrome window for profile: $profile_alias" >&2
+        mark_window_used "$saved_win"
+        echo "$saved_win"
+        return 0
+    fi
+
+    # No saved window or it no longer exists, create a new one
+    local before_windows
+    before_windows=$(wmctrl -l | grep -i "Chrome" | awk '{print $1}' | sort)
+
+    echo "Launching Chrome window (profile: $profile_alias)..." >&2
+    nohup google-chrome --new-window --profile-directory="$profile_dir" "about:blank" > /dev/null 2>&1 &
+    sleep 3
+
+    # Find the newly created window by comparing before/after
+    local after_windows
+    after_windows=$(wmctrl -l | grep -i "Chrome" | awk '{print $1}' | sort)
+
+    local new_win
+    new_win=$(comm -13 <(echo "$before_windows") <(echo "$after_windows") | head -1)
+
+    if [[ -n "$new_win" ]] && ! is_window_used "$new_win"; then
+        mark_window_used "$new_win"
+        save_chrome_window "$profile_alias" "$new_win"
+        echo "$new_win"
+        return 0
+    fi
+
+    # Fallback: if we couldn't detect new window, try any unused Chrome window
     local win
     while IFS= read -r win; do
         if ! is_window_used "$win"; then
             mark_window_used "$win"
-            echo "$win"
-            return 0
-        fi
-    done < <(wmctrl -l | grep -i "Chrome" | awk '{print $1}')
-
-    # No available window, create one with profile
-    echo "Creating new Chrome window (profile: $profile_alias)..." >&2
-    nohup google-chrome --new-window --profile-directory="$profile_dir" > /dev/null 2>&1 &
-    sleep 4
-
-    # Find the newly created window
-    while IFS= read -r win; do
-        if ! is_window_used "$win"; then
-            mark_window_used "$win"
+            save_chrome_window "$profile_alias" "$win"
             echo "$win"
             return 0
         fi

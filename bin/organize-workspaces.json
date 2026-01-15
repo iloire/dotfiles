@@ -24,11 +24,36 @@
   },
   "top_bar_offset": 32,
   "positions": {
-    "left-half": { "x": 0, "y": 0, "width": 0.5, "height": 1 },
-    "right-half": { "x": 0.5, "y": 0, "width": 0.5, "height": 1 },
-    "full": { "x": 0, "y": 0, "width": 1, "height": 1 },
-    "top-half": { "x": 0, "y": 0, "width": 1, "height": 0.5 },
-    "bottom-half": { "x": 0, "y": 0.5, "width": 1, "height": 0.5 }
+    "left-half": {
+      "x": 0,
+      "y": 0,
+      "width": 0.5,
+      "height": 1
+    },
+    "right-half": {
+      "x": 0.5,
+      "y": 0,
+      "width": 0.5,
+      "height": 1
+    },
+    "full": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "top-half": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 0.5
+    },
+    "bottom-half": {
+      "x": 0,
+      "y": 0.5,
+      "width": 1,
+      "height": 0.5
+    }
   },
   "chrome_profiles": {
     "default": "Default",
@@ -40,38 +65,103 @@
       "name": "Work 1",
       "workspace": 0,
       "windows": [
-        { "app": "vscode", "folder": "/home/ivan/dotfiles", "monitor": "center", "position": "left-half" },
-        { "app": "chrome", "profile": "default", "monitor": "center", "position": "right-half" },
-        { "app": "chrome", "profile": "iloire", "monitor": "top", "position": "full" },
-        { "app": "chrome", "profile": "venturi", "monitor": "right", "position": "top-half" },
-        { "app": "terminal", "monitor": "right", "position": "bottom-half" }
+        {
+          "app": "vscode",
+          "folder": "/home/ivan/dotfiles",
+          "monitor": "center",
+          "position": "left-half"
+        },
+        {
+          "app": "chrome",
+          "profile": "default",
+          "monitor": "center",
+          "position": "right-half"
+        },
+        {
+          "app": "chrome",
+          "profile": "iloire",
+          "monitor": "top",
+          "position": "left-half"
+        },
+        {
+          "app": "chrome",
+          "profile": "venturi",
+          "monitor": "right",
+          "position": "top-half"
+        },
+        {
+          "app": "terminal",
+          "monitor": "right",
+          "position": "bottom-half"
+        }
       ]
     },
     {
       "name": "Work 2",
       "workspace": 1,
       "windows": [
-        { "app": "vscode", "folder": "/home/ivan/code/lanzarote3d", "monitor": "center", "position": "left-half" },
-        { "app": "chrome", "profile": "default", "monitor": "center", "position": "right-half" },
-        { "app": "terminal", "monitor": "right", "position": "bottom-half" }
+        {
+          "app": "vscode",
+          "folder": "/home/ivan/code/lanzarote3d",
+          "monitor": "center",
+          "position": "left-half"
+        },
+        {
+          "app": "chrome",
+          "profile": "default",
+          "monitor": "center",
+          "position": "right-half"
+        },
+        {
+          "app": "terminal",
+          "monitor": "right",
+          "position": "bottom-half"
+        }
       ]
     },
     {
       "name": "Work 3",
       "workspace": 2,
       "windows": [
-        { "app": "vscode", "folder": "/home/ivan/code/ansible-recipes", "monitor": "center", "position": "left-half" },
-        { "app": "chrome", "profile": "default", "monitor": "center", "position": "right-half" },
-        { "app": "terminal", "monitor": "right", "position": "bottom-half" }
+        {
+          "app": "vscode",
+          "folder": "/home/ivan/code/ansible-recipes",
+          "monitor": "center",
+          "position": "left-half"
+        },
+        {
+          "app": "chrome",
+          "profile": "default",
+          "monitor": "center",
+          "position": "right-half"
+        },
+        {
+          "app": "terminal",
+          "monitor": "right",
+          "position": "bottom-half"
+        }
       ]
     },
     {
       "name": "Notes",
       "workspace": 3,
       "windows": [
-        { "app": "obsidian", "monitor": "center", "position": "left-half" },
-        { "app": "chrome", "profile": "default", "monitor": "center", "position": "right-half" },
-        { "app": "todo", "monitor": "right", "position": "top-half" }
+        {
+          "app": "obsidian",
+          "monitor": "center",
+          "position": "left-half"
+        },
+        {
+          "app": "chrome",
+          "profile": "default",
+          "monitor": "center",
+          "position": "right-half"
+        },
+        {
+          "app": "todo",
+          "monitor": "right",
+          "position": "top-half"
+        }
       ]
     }
   ]
