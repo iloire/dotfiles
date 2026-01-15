@@ -2,6 +2,14 @@
 # Category: files
 # Description: Show disk usage with color-coded sizes
 
+# Color definitions using $'...' syntax for portability
+GREEN=$'\033[1;32m'
+YELLOW=$'\033[1;33m'
+RED=$'\033[1;31m'
+MAGENTA=$'\033[1;35m'
+BLUE=$'\033[1;34m'
+RESET=$'\033[0m'
+
 # Function to display usage
 usage() {
 	echo "Usage: $0 [directory]"
@@ -22,28 +30,31 @@ colorize_size() {
 	SIZE=$1
 	ITEM=$2
 
-	# Remove trailing size indicator (K, M, G, T)
-	SIZE_NUMBER=$(echo $SIZE | sed 's/[KMGTP]//')
-
 	# Determine the color based on size
 	if [[ $SIZE == *K ]]; then
-		COLOR="\e[1;32m" # Green for Kilobytes
+		COLOR="$GREEN"
 	elif [[ $SIZE == *M ]]; then
-		COLOR="\e[1;33m" # Yellow for Megabytes
+		COLOR="$YELLOW"
 	elif [[ $SIZE == *G ]]; then
-		COLOR="\e[1;31m" # Red for Gigabytes
+		COLOR="$RED"
 	elif [[ $SIZE == *T ]]; then
-		COLOR="\e[1;35m" # Magenta for Terabytes
+		COLOR="$MAGENTA"
 	else
-		COLOR="\e[1;34m" # Blue for other cases
+		COLOR="$BLUE"
 	fi
 
 	# Print the colored output
-	echo -e "${COLOR}${SIZE}\t${ITEM}\e[0m"
+	printf '%s%s\t%s%s\n' "$COLOR" "$SIZE" "$ITEM" "$RESET"
 }
 
 # List the space taken in the directory with a nice format and colors
-echo -e "\e[1;34mSpace taken in directory: $DIRECTORY\e[0m"
-du -h --max-depth=1 "$DIRECTORY" | sort -h | while read size item; do
+printf '%sSpace taken in directory: %s%s\n' "$BLUE" "$DIRECTORY" "$RESET"
+if [[ "$(uname)" == "Darwin" ]]; then
+	DU_CMD="du -h -d 1"
+else
+	DU_CMD="du -h --max-depth=1"
+fi
+
+$DU_CMD "$DIRECTORY" | sort -h | while read size item; do
 	colorize_size "$size" "$item"
 done
