@@ -9,8 +9,20 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${1:-$SCRIPT_DIR/organize-workspaces.json}"
+CONFIG_DIR="${HOME}/myconfig/organize-workspaces"
+CONFIG_NAME="${1:-default}"
+
+# If argument is a path to a file, use it directly; otherwise treat as config name
+if [[ -f "$CONFIG_NAME" ]]; then
+    CONFIG_FILE="$CONFIG_NAME"
+elif [[ -f "${CONFIG_DIR}/${CONFIG_NAME}.json" ]]; then
+    CONFIG_FILE="${CONFIG_DIR}/${CONFIG_NAME}.json"
+else
+    echo "Error: Config not found: $CONFIG_NAME"
+    echo "Available configs:"
+    ls -1 "$CONFIG_DIR"/*.json 2>/dev/null | xargs -I{} basename {} .json | sed 's/^/  /'
+    exit 1
+fi
 
 for cmd in wmctrl jq; do
     if ! command -v "$cmd" &>/dev/null; then
