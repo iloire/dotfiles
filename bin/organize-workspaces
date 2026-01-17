@@ -109,8 +109,9 @@ calc_position() {
 USED_WINDOWS_FILE=$(mktemp)
 trap "rm -f $USED_WINDOWS_FILE" EXIT
 
-# Persistent state file for Chrome profile -> window mapping
-CHROME_STATE_FILE="/tmp/organize-workspaces-chrome-state"
+# Persistent state file for Chrome profile -> window mapping (per config)
+CONFIG_BASENAME=$(basename "$CONFIG_FILE" .json)
+CHROME_STATE_FILE="/tmp/organize-workspaces-chrome-state-${CONFIG_BASENAME}"
 
 is_window_used() {
     grep -q "^$1$" "$USED_WINDOWS_FILE" 2>/dev/null
