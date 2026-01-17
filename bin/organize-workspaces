@@ -210,19 +210,7 @@ get_chrome_window() {
         return 0
     fi
 
-    # Try to reuse any existing unused Chrome window before creating a new one
-    local win
-    while IFS= read -r win; do
-        if ! is_window_used "$win"; then
-            echo "Reusing existing Chrome window" >&2
-            mark_window_used "$win"
-            save_chrome_window "$profile_alias" "$win"
-            echo "$win"
-            return 0
-        fi
-    done < <(wmctrl -l | grep -i "Chrome" | awk '{print $1}')
-
-    # No existing windows available, create a new one
+    # No saved window available, create a new one with the correct profile
     local before_windows
     before_windows=$(wmctrl -l | grep -i "Chrome" | awk '{print $1}' | sort)
 
