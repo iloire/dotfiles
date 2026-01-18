@@ -121,17 +121,73 @@ mark_window_used() {
     echo "$1" >> "$USED_WINDOWS_FILE"
 }
 
-# Get VS Code window for a specific folder, or create one
+# Directory for generated workspace files
+WORKSPACE_DIR="/tmp/organize-workspaces"
+mkdir -p "$WORKSPACE_DIR"
+
+# Get VS Code window for a specific folder, folders array, or workspace file
 get_vscode_window() {
     local folder="${1:-}"
-    local folder_name=""
+    local workspace="${2:-}"
+    local folders_json="${3:-}"
+    local search_name=""
     local win
 
-    if [[ -n "$folder" && "$folder" != "null" ]]; then
-        folder_name=$(basename "$folder")
+    # Priority 1: folders array - generate a workspace file
+    if [[ -n "$folders_json" && "$folders_json" != "null" && "$folders_json" != "[]" ]]; then
+        # Use first folder's basename as the workspace name for window matching
+        search_name=$(echo "$folders_json" | jq -r '.[0]' | xargs basename)
+        local workspace_file="$WORKSPACE_DIR/${search_name}.code-workspace"
+
+        # Generate workspace file from folders array
+        echo "$folders_json" | jq '{folders: [.[] | {path: .}]}' > "$workspace_file"
+
+        # Try to find existing window
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
+        if [[ -n "$win" ]] && ! is_window_used "$win"; then
+            mark_window_used "$win"
+            echo "$win"
+            return 0
+        fi
+
+        # Not found, open the workspace
+        echo "Opening VS Code with folders: $search_name..." >&2
+        code --new-window "$workspace_file" &>/dev/null &
+        sleep 3
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
+        if [[ -n "$win" ]]; then
+            mark_window_used "$win"
+            echo "$win"
+            return 0
+        fi
+    # Priority 2: workspace file
+    elif [[ -n "$workspace" && "$workspace" != "null" ]]; then
+        search_name=$(basename "$workspace" .code-workspace)
+
+        # Try to find existing window with this workspace open (workspace name appears in title)
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
+        if [[ -n "$win" ]] && ! is_window_used "$win"; then
+            mark_window_used "$win"
+            echo "$win"
+            return 0
+        fi
+
+        # Not found, open the workspace in a new window
+        echo "Opening VS Code with workspace: $search_name..." >&2
+        code --new-window "$workspace" &>/dev/null &
+        sleep 3
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
+        if [[ -n "$win" ]]; then
+            mark_window_used "$win"
+            echo "$win"
+            return 0
+        fi
+    # Priority 3: single folder
+    elif [[ -n "$folder" && "$folder" != "null" ]]; then
+        search_name=$(basename "$folder")
 
         # First, try to find existing window with this folder open
-        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$folder_name" | awk '{print $1}' | head -1)
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
         if [[ -n "$win" ]] && ! is_window_used "$win"; then
             mark_window_used "$win"
             echo "$win"
@@ -139,10 +195,10 @@ get_vscode_window() {
         fi
 
         # Not found, open the folder in a new window
-        echo "Opening VS Code with folder: $folder_name..." >&2
+        echo "Opening VS Code with folder: $search_name..." >&2
         code --new-window "$folder" &>/dev/null &
         sleep 3
-        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$folder_name" | awk '{print $1}' | head -1)
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
         if [[ -n "$win" ]]; then
             mark_window_used "$win"
             echo "$win"
@@ -308,7 +364,9 @@ for ((ws_idx = 0; ws_idx < num_workspaces; ws_idx++)); do
         case "$app" in
             vscode)
                 folder=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].folder // empty" "$CONFIG_FILE")
-                win_id=$(get_vscode_window "$folder")
+                workspace=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].workspace // empty" "$CONFIG_FILE")
+                folders_json=$(jq -c ".workspaces[$ws_idx].windows[$win_idx].folders // empty" "$CONFIG_FILE")
+                win_id=$(get_vscode_window "$folder" "$workspace" "$folders_json")
                 ;;
             chrome)
                 profile=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].profile" "$CONFIG_FILE")
