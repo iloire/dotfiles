@@ -12,7 +12,7 @@
 #   -n, --dry-run  Show what would be deleted without actually deleting
 
 # Age thresholds in days
-DOWNLOADS_MAX_AGE=20
+DOWNLOADS_MAX_AGE=10
 INSTALLERS_MAX_AGE=4
 IMAGES_MAX_AGE=10
 TORRENTS_MAX_AGE=10
