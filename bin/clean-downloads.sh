@@ -104,9 +104,9 @@ clean_files() {
     local stale_size=0
     if [ "$stale_files" -gt 0 ]; then
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            stale_size=$("${find_cmd[@]}" -exec stat -f%z {} + 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
+            stale_size=$("${find_cmd[@]}" -exec stat -f%z {} + 2>/dev/null | awk '{sum+=$1} END {printf "%.0f\n", sum+0}')
         else
-            stale_size=$("${find_cmd[@]}" -exec stat -c%s {} + 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
+            stale_size=$(LC_NUMERIC=C "${find_cmd[@]}" -exec stat -c%s {} + 2>/dev/null | awk '{sum+=$1} END {printf "%.0f\n", sum+0}')
         fi
     fi
 
