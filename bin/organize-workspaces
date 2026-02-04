@@ -93,6 +93,31 @@ while IFS= read -r line; do
 done < <(jq -c '.monitors[]' "$CONFIG_FILE")
 
 # =============================================================================
+# ACTIVE MONITOR DETECTION
+# Use xrandr to detect which monitors are currently connected.
+# Windows targeting inactive monitors will be skipped to avoid placing them
+# on a monitor that is turned off.
+# =============================================================================
+
+declare -A ACTIVE_MONITORS
+FALLBACK_MONITOR=""
+echo "Detecting active monitors..."
+active_outputs=$(xrandr --query | grep " connected" | awk '{print $1}')
+
+while IFS= read -r line; do
+    alias=$(echo "$line" | jq -r '.key')
+    output_name=$(echo "$line" | jq -r '.value.name')
+    if echo "$active_outputs" | grep -q "^${output_name}$"; then
+        ACTIVE_MONITORS[$alias]=1
+        [[ -z "$FALLBACK_MONITOR" ]] && FALLBACK_MONITOR="$alias"
+        echo "  Monitor '$alias' ($output_name): ACTIVE"
+    else
+        echo "  Monitor '$alias' ($output_name): INACTIVE - windows will be relocated"
+    fi
+done < <(jq -c '.monitors | to_entries[]' "$CONFIG_FILE")
+echo "Fallback monitor: $FALLBACK_MONITOR"
+
+# =============================================================================
 # POSITION PRESETS
 # Parse position presets (left-half, right-half, full, etc.) from config.
 # Positions are defined as fractions (0-1) of the monitor dimensions.
@@ -659,9 +684,19 @@ for ((ws_idx = 0; ws_idx < num_workspaces; ws_idx++)); do
         app=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].app" "$CONFIG_FILE")
         monitor=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].monitor" "$CONFIG_FILE")
         position=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].position" "$CONFIG_FILE")
+        fallback_monitor=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].fallback_monitor // empty" "$CONFIG_FILE")
+        fallback_position=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].fallback_position // empty" "$CONFIG_FILE")
 
         echo ""
         echo "Window $((win_idx + 1))/$num_windows: $app -> $monitor/$position"
+
+        # Relocate windows targeting inactive monitors
+        if [[ -z "${ACTIVE_MONITORS[$monitor]:-}" ]]; then
+            local target="${fallback_monitor:-$FALLBACK_MONITOR}"
+            echo "  Monitor '$monitor' is not active, relocating to '$target'"
+            monitor="$target"
+            [[ -n "$fallback_position" ]] && position="$fallback_position"
+        fi
 
         # Get or create the appropriate window based on app type
         win_id=""
