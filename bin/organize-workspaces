@@ -2,28 +2,65 @@
 # Category: files
 # Description: Organize windows across workspaces using JSON config
 #
-# Organizes windows across workspaces based on JSON config
+# This script organizes application windows across multiple workspaces based on a JSON
+# configuration file. It handles VS Code, Chrome (with multiple profiles), terminals,
+# Obsidian, and TODO apps.
+#
+# DESIGN DECISIONS:
+# - Uses wmctrl for window manipulation (X11-based, works with most window managers)
+# - Uses jq for JSON parsing (robust and widely available)
+# - Tracks "used" windows to prevent the same window from being assigned to multiple positions
+# - Persists Chrome window-to-profile mappings between runs for consistent placement
+# - Generates VS Code workspace files on-the-fly for multi-folder configurations
+#
 # Requires: wmctrl, jq
 # Install: sudo apt install wmctrl jq
 #
 
 set -euo pipefail
 
-CONFIG_DIR="${HOME}/myconfig/organize-workspaces"
-CONFIG_NAME="${1:-default}"
+# =============================================================================
+# CONFIGURATION LOADING
+# =============================================================================
 
-# If argument is a path to a file, use it directly; otherwise treat as config name
+CONFIG_DIR="${HOME}/myconfig/organize-workspaces"
+
+show_help() {
+    echo "Usage: $(basename "$0") <config-name|config-path>"
+    echo ""
+    echo "Organize application windows across workspaces based on a JSON config."
+    echo ""
+    echo "Arguments:"
+    echo "  <config-name>   Name of a config in $CONFIG_DIR (without .json)"
+    echo "  <config-path>   Direct path to a JSON config file"
+    echo ""
+    echo "Available configs:"
+    ls -1 "$CONFIG_DIR"/*.json 2>/dev/null | xargs -I{} basename {} .json | sed 's/^/  /'
+    echo ""
+    echo "Requires: wmctrl, jq"
+}
+
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+    exit 0
+fi
+
+CONFIG_NAME="$1"
+
+# Support both direct file paths and config names (without .json extension)
+# This allows: organize-workspaces venturi OR organize-workspaces /path/to/config.json
 if [[ -f "$CONFIG_NAME" ]]; then
     CONFIG_FILE="$CONFIG_NAME"
 elif [[ -f "${CONFIG_DIR}/${CONFIG_NAME}.json" ]]; then
     CONFIG_FILE="${CONFIG_DIR}/${CONFIG_NAME}.json"
 else
     echo "Error: Config not found: $CONFIG_NAME"
-    echo "Available configs:"
-    ls -1 "$CONFIG_DIR"/*.json 2>/dev/null | xargs -I{} basename {} .json | sed 's/^/  /'
+    echo ""
+    show_help
     exit 1
 fi
 
+# Verify required dependencies are installed
 for cmd in wmctrl jq; do
     if ! command -v "$cmd" &>/dev/null; then
         echo "Error: $cmd is required. Install with: sudo apt install $cmd"
@@ -38,44 +75,74 @@ fi
 
 echo "Loading config from: $CONFIG_FILE"
 
-# Parse monitors from config
+# =============================================================================
+# MONITOR CONFIGURATION
+# Parse monitor definitions from JSON config into associative arrays for fast lookup.
+# Each monitor has: name (X11 output name), x/y (position), width/height (dimensions)
+# =============================================================================
+
 declare -A MONITOR_X MONITOR_Y MONITOR_W MONITOR_H
+echo "Parsing monitor configuration..."
 while IFS= read -r line; do
     name=$(echo "$line" | jq -r '.name')
     MONITOR_X[$name]=$(echo "$line" | jq -r '.x')
     MONITOR_Y[$name]=$(echo "$line" | jq -r '.y')
     MONITOR_W[$name]=$(echo "$line" | jq -r '.width')
     MONITOR_H[$name]=$(echo "$line" | jq -r '.height')
+    echo "  Monitor '$name': ${MONITOR_W[$name]}x${MONITOR_H[$name]} at (${MONITOR_X[$name]},${MONITOR_Y[$name]})"
 done < <(jq -c '.monitors[]' "$CONFIG_FILE")
 
-# Parse positions from config
+# =============================================================================
+# POSITION PRESETS
+# Parse position presets (left-half, right-half, full, etc.) from config.
+# Positions are defined as fractions (0-1) of the monitor dimensions.
+# This allows the same position preset to work across different monitor sizes.
+# =============================================================================
+
 declare -A POS_X POS_Y POS_W POS_H
+echo "Parsing position presets..."
 while IFS= read -r line; do
     name=$(echo "$line" | jq -r '.key')
     POS_X[$name]=$(echo "$line" | jq -r '.value.x')
     POS_Y[$name]=$(echo "$line" | jq -r '.value.y')
     POS_W[$name]=$(echo "$line" | jq -r '.value.width')
     POS_H[$name]=$(echo "$line" | jq -r '.value.height')
+    echo "  Position '$name': x=${POS_X[$name]}, y=${POS_Y[$name]}, w=${POS_W[$name]}, h=${POS_H[$name]}"
 done < <(jq -c '.positions | to_entries[] | {key: .key, value: .value}' "$CONFIG_FILE")
 
-# Parse chrome profiles
+# =============================================================================
+# CHROME PROFILE MAPPING
+# Chrome profiles allow multiple isolated browser sessions (different accounts, cookies, etc.)
+# The config maps friendly names (e.g., "work", "personal") to Chrome's internal profile
+# directory names (e.g., "Profile 1", "Default")
+# =============================================================================
+
 declare -A CHROME_PROFILES
+echo "Parsing Chrome profiles..."
 while IFS= read -r line; do
     key=$(echo "$line" | jq -r '.key')
     value=$(echo "$line" | jq -r '.value')
     CHROME_PROFILES[$key]="$value"
+    echo "  Profile '$key' -> '$value'"
 done < <(jq -c '.chrome_profiles | to_entries[]' "$CONFIG_FILE")
 
-# Get monitor name from alias (left, center, right)
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+# Get the X11 output name (e.g., "DP-0") for a monitor alias (e.g., "center")
 get_monitor_name() {
     local alias="$1"
     jq -r ".monitors.$alias.name" "$CONFIG_FILE"
 }
 
-# Get top bar offset from config (default 0)
+# Top bar offset accounts for system panels/bars that reduce usable screen space
+# This ensures windows don't overlap with the top panel
 TOP_BAR_OFFSET=$(jq -r '.top_bar_offset // 0' "$CONFIG_FILE")
+echo "Top bar offset: ${TOP_BAR_OFFSET}px"
 
-# Calculate absolute position
+# Calculate absolute pixel coordinates from monitor alias + position preset
+# This converts fractional positions (0-1) to actual screen coordinates
 calc_position() {
     local monitor_alias="$1"
     local position="$2"
@@ -93,10 +160,11 @@ calc_position() {
     local pos_w=${POS_W[$position]}
     local pos_h=${POS_H[$position]}
 
-    # Effective monitor height after top bar offset
+    # Subtract top bar from effective height to avoid overlapping system panels
     local effective_h=$((mon_h - TOP_BAR_OFFSET))
 
-    # Calculate absolute coordinates (y offset applied, height reduced)
+    # Convert fractional positions to absolute pixel coordinates
+    # Example: left-half on a 1920px wide monitor = x:0, width:960
     local abs_x=$(echo "$mon_x + ($mon_w * $pos_x)" | bc | cut -d. -f1)
     local abs_y=$(echo "$mon_y + $TOP_BAR_OFFSET + ($effective_h * $pos_y)" | bc | cut -d. -f1)
     local abs_w=$(echo "$mon_w * $pos_w" | bc | cut -d. -f1)
@@ -105,11 +173,19 @@ calc_position() {
     echo "$abs_x,$abs_y,$abs_w,$abs_h"
 }
 
-# Track used windows to avoid reusing (using temp file for subshell persistence)
+# =============================================================================
+# WINDOW TRACKING
+# We track which windows have been "used" (assigned to a position) to prevent
+# the same window from being placed in multiple locations. This is important
+# when you have multiple VS Code or Chrome instances.
+# =============================================================================
+
 USED_WINDOWS_FILE=$(mktemp)
 trap "rm -f $USED_WINDOWS_FILE" EXIT
 
-# Persistent state file for Chrome profile -> window mapping (per config)
+# Persistent state file for Chrome profile -> window ID mapping
+# This survives between script runs, allowing us to remember which Chrome window
+# belongs to which profile (Chrome doesn't expose this info in window titles)
 CONFIG_BASENAME=$(basename "$CONFIG_FILE" .json)
 CHROME_STATE_FILE="/tmp/organize-workspaces-chrome-state-${CONFIG_BASENAME}"
 
@@ -121,11 +197,54 @@ mark_window_used() {
     echo "$1" >> "$USED_WINDOWS_FILE"
 }
 
-# Directory for generated workspace files
+# Directory for auto-generated VS Code workspace files
+# When config specifies multiple folders, we generate a .code-workspace file
 WORKSPACE_DIR="/tmp/organize-workspaces"
 mkdir -p "$WORKSPACE_DIR"
 
-# Get VS Code window for a specific folder, folders array, or workspace file
+# =============================================================================
+# VS CODE WINDOW MANAGEMENT
+#
+# VS Code windows are identified by searching for "Visual Studio Code" in wmctrl output.
+#
+# CHALLENGE: Window titles can be ambiguous
+# - Title format: "[current file] - [folder name] - Visual Studio Code"
+# - Generic folder names like "code" would match ALL windows (they all contain "Visual Studio Code")
+# - VS Code uses single main process (Electron), so we can't match by PID
+#
+# SOLUTION: Use workspace files with unique names
+# - For single folders with generic names (code, src, app), auto-generate a workspace file
+# - Workspace name is based on parent directory (e.g., "venturi-paragliding" for /path/venturi-paragliding/code)
+# - VS Code shows workspace name in title: "file.js - venturi-paragliding (Workspace) - Visual Studio Code"
+# - This gives us unique, predictable window titles for matching
+#
+# PRIORITY ORDER:
+# 1. folders array - Generate a .code-workspace file and open it (multi-folder workspace)
+# 2. workspace file - Open an existing .code-workspace file
+# 3. single folder with generic name - Auto-generate workspace file for unique matching
+# 4. single folder with unique name - Use title-based matching directly
+# =============================================================================
+
+# Generate a workspace file for a single folder, using a unique name
+# Returns the path to the generated workspace file
+generate_workspace_for_folder() {
+    local folder="$1"
+    local workspace_name="$2"
+
+    local workspace_file="$WORKSPACE_DIR/${workspace_name}.code-workspace"
+
+    echo "    Generating workspace file: $workspace_file" >&2
+    cat > "$workspace_file" << EOF
+{
+    "folders": [
+        {"path": "$folder"}
+    ]
+}
+EOF
+
+    echo "$workspace_file"
+}
+
 get_vscode_window() {
     local folder="${1:-}"
     local workspace="${2:-}"
@@ -133,100 +252,209 @@ get_vscode_window() {
     local search_name=""
     local win
 
+    echo "  [VS Code] Looking for window..." >&2
+    echo "    folder='$folder', workspace='$workspace', folders_json='$folders_json'" >&2
+
     # Priority 1: folders array - generate a workspace file
+    # This is used when you want a single VS Code window with multiple root folders
     if [[ -n "$folders_json" && "$folders_json" != "null" && "$folders_json" != "[]" ]]; then
-        # Use first folder's basename as the workspace name for window matching
+        # Use first folder's basename as the workspace identifier
         search_name=$(echo "$folders_json" | jq -r '.[0]' | xargs basename)
         local workspace_file="$WORKSPACE_DIR/${search_name}.code-workspace"
 
+        echo "    [Priority 1] Multi-folder workspace, search_name='$search_name'" >&2
+
         # Generate workspace file from folders array
+        # Format: {"folders": [{"path": "/path/1"}, {"path": "/path/2"}]}
         echo "$folders_json" | jq '{folders: [.[] | {path: .}]}' > "$workspace_file"
+        echo "    Generated workspace file: $workspace_file" >&2
 
-        # Try to find existing window
+        # Try to find existing window with this workspace open
         win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
         if [[ -n "$win" ]] && ! is_window_used "$win"; then
-            mark_window_used "$win"
-            echo "$win"
-            return 0
-        fi
-
-        # Not found, open the workspace
-        echo "Opening VS Code with folders: $search_name..." >&2
-        code --new-window "$workspace_file" &>/dev/null &
-        sleep 3
-        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
-        if [[ -n "$win" ]]; then
-            mark_window_used "$win"
-            echo "$win"
-            return 0
-        fi
-    # Priority 2: workspace file
-    elif [[ -n "$workspace" && "$workspace" != "null" ]]; then
-        search_name=$(basename "$workspace" .code-workspace)
-
-        # Try to find existing window with this workspace open (workspace name appears in title)
-        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
-        if [[ -n "$win" ]] && ! is_window_used "$win"; then
+            echo "    Found existing window ($win) matching '$search_name'" >&2
             mark_window_used "$win"
             echo "$win"
             return 0
         fi
 
         # Not found, open the workspace in a new window
+        echo "    No existing window found, opening workspace: $search_name" >&2
+        echo "Opening VS Code with folders: $search_name..." >&2
+        code --new-window "$workspace_file" &>/dev/null &
+        sleep 3
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
+        if [[ -n "$win" ]]; then
+            echo "    Created new window: $win" >&2
+            mark_window_used "$win"
+            echo "$win"
+            return 0
+        fi
+
+    # Priority 2: workspace file
+    # For existing .code-workspace files
+    elif [[ -n "$workspace" && "$workspace" != "null" ]]; then
+        search_name=$(basename "$workspace" .code-workspace)
+
+        echo "    [Priority 2] Workspace file, search_name='$search_name'" >&2
+
+        # Try to find existing window with this workspace open
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
+        if [[ -n "$win" ]] && ! is_window_used "$win"; then
+            echo "    Found existing window ($win) matching '$search_name'" >&2
+            mark_window_used "$win"
+            echo "$win"
+            return 0
+        fi
+
+        # Not found, open the workspace in a new window
+        echo "    No existing window found, opening workspace: $search_name" >&2
         echo "Opening VS Code with workspace: $search_name..." >&2
         code --new-window "$workspace" &>/dev/null &
         sleep 3
         win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
         if [[ -n "$win" ]]; then
+            echo "    Created new window: $win" >&2
             mark_window_used "$win"
             echo "$win"
             return 0
         fi
+
     # Priority 3: single folder
     elif [[ -n "$folder" && "$folder" != "null" ]]; then
-        search_name=$(basename "$folder")
+        local folder_basename
+        folder_basename=$(basename "$folder")
 
-        # First, try to find existing window with this folder open
-        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
-        if [[ -n "$win" ]] && ! is_window_used "$win"; then
-            mark_window_used "$win"
-            echo "$win"
-            return 0
+        echo "    [Priority 3] Single folder: $folder" >&2
+        echo "    Folder basename: $folder_basename" >&2
+
+        # List current VS Code windows for debugging
+        echo "    Current VS Code windows:" >&2
+        wmctrl -l | grep -i "Visual Studio Code" | while read -r line; do
+            echo "      $line" >&2
+        done
+
+        # Check if folder name is generic (would cause false matches in window titles)
+        # Generic names like "code", "src", "app" appear in "Visual Studio Code" or are too common
+        local is_generic=false
+        if [[ "$folder_basename" == "code" || "$folder_basename" == "src" || "$folder_basename" == "app" || "$folder_basename" == "lib" || "$folder_basename" == "bin" || "$folder_basename" == "dist" ]]; then
+            is_generic=true
+            # Use parent directory name as the workspace name for uniqueness
+            search_name=$(basename "$(dirname "$folder")")
+            echo "    Folder name '$folder_basename' is generic - using parent name '$search_name' for workspace" >&2
+        else
+            search_name="$folder_basename"
         fi
 
-        # Not found, open the folder in a new window
-        echo "Opening VS Code with folder: $search_name..." >&2
-        code --new-window "$folder" &>/dev/null &
-        sleep 3
-        win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
-        if [[ -n "$win" ]]; then
+        # For generic folder names, we'll use a workspace file approach
+        # This gives us a unique window title: "[file] - [workspace_name] (Workspace) - Visual Studio Code"
+        if [[ "$is_generic" == true ]]; then
+            echo "    Using workspace file approach for reliable matching..." >&2
+
+            # Check if there's already a window with this workspace open
+            # Look for "(Workspace)" in the title to identify workspace-based windows
+            win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | grep -i "(Workspace)" | awk '{print $1}' | head -1)
+            if [[ -n "$win" ]] && ! is_window_used "$win"; then
+                echo "Found existing VS Code workspace window for: $search_name (window: $win)" >&2
+                mark_window_used "$win"
+                echo "$win"
+                return 0
+            fi
+
+            # Generate workspace file and open it
+            local workspace_file
+            workspace_file=$(generate_workspace_for_folder "$folder" "$search_name")
+            echo "Opening VS Code with workspace: $workspace_file..." >&2
+            code --new-window "$workspace_file" &>/dev/null &
+            sleep 3
+
+            # Find the newly created window
+            win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | grep -i "(Workspace)" | awk '{print $1}' | tail -1)
+            if [[ -n "$win" ]] && ! is_window_used "$win"; then
+                echo "    Created new workspace window: $win" >&2
+                mark_window_used "$win"
+                echo "$win"
+                return 0
+            fi
+        else
+            # For unique folder names, use direct title matching
+            echo "    Using title-based matching for unique folder name..." >&2
+            win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | head -1)
+            if [[ -n "$win" ]] && ! is_window_used "$win"; then
+                echo "Found existing VS Code window for: $search_name (window: $win)" >&2
+                mark_window_used "$win"
+                echo "$win"
+                return 0
+            fi
+
+            # No existing window found - open the folder directly
+            echo "    No existing window found, opening folder: $folder" >&2
+            echo "Opening VS Code with folder: $folder..." >&2
+            code --new-window "$folder" &>/dev/null &
+            sleep 3
+
+            # Find the newly created window
+            win=$(wmctrl -l | grep -i "Visual Studio Code" | grep -i "$search_name" | awk '{print $1}' | tail -1)
+            if [[ -n "$win" ]] && ! is_window_used "$win"; then
+                echo "    Created new window: $win" >&2
+                mark_window_used "$win"
+                echo "$win"
+                return 0
+            fi
+        fi
+
+        # Last resort: get the most recently created VS Code window
+        echo "    Fallback: using most recent VS Code window" >&2
+        win=$(wmctrl -l | grep -i "Visual Studio Code" | tail -1 | awk '{print $1}')
+        if [[ -n "$win" ]] && ! is_window_used "$win"; then
+            echo "    Using fallback window: $win" >&2
             mark_window_used "$win"
             echo "$win"
             return 0
         fi
     fi
 
-    # No folder specified or couldn't find/create, use any available window
+    # Fallback: No folder/workspace specified, or couldn't find/create the right window
+    # Use any available VS Code window that hasn't been assigned yet
+    echo "    [Fallback] Looking for any unused VS Code window..." >&2
     while IFS= read -r win; do
         if ! is_window_used "$win"; then
+            echo "    Using unassigned VS Code window: $win" >&2
             mark_window_used "$win"
             echo "$win"
             return 0
         fi
     done < <(wmctrl -l | grep -i "Visual Studio Code" | awk '{print $1}')
 
-    # No available window, create one
+    # Last resort: Create a blank VS Code window
+    echo "    No VS Code windows available, creating new blank window..." >&2
     echo "Creating new VS Code window..." >&2
     code --new-window &>/dev/null &
     sleep 3
     win=$(wmctrl -l | grep -i "Visual Studio Code" | tail -1 | awk '{print $1}')
     if [[ -n "$win" ]] && ! is_window_used "$win"; then
+        echo "    Created blank window: $win" >&2
         mark_window_used "$win"
         echo "$win"
     fi
 }
 
-# Get saved Chrome window for profile from state file
+# =============================================================================
+# CHROME WINDOW MANAGEMENT
+#
+# Chrome profiles allow separate browser sessions with different accounts/cookies.
+# Challenge: Chrome doesn't include profile name in window titles, so we can't
+# identify which window belongs to which profile just from wmctrl output.
+#
+# SOLUTION: Persistent state file
+# - When we create a Chrome window for a profile, we save the window ID
+# - On subsequent runs, we check if that window still exists
+# - If it does, we reuse it; otherwise, we create a new one
+#
+# This allows consistent Chrome placement across multiple script runs.
+# =============================================================================
+
+# Get saved Chrome window ID for a profile from state file
 get_saved_chrome_window() {
     local profile_alias="$1"
     if [[ -f "$CHROME_STATE_FILE" ]]; then
@@ -234,48 +462,60 @@ get_saved_chrome_window() {
     fi
 }
 
-# Save Chrome window for profile to state file
+# Save Chrome window ID for a profile to state file
 save_chrome_window() {
     local profile_alias="$1"
     local win_id="$2"
-    # Remove old entry for this profile, then add new one
+    # Remove old entry for this profile (if any), then add new one
     if [[ -f "$CHROME_STATE_FILE" ]]; then
         grep -v "^$profile_alias:" "$CHROME_STATE_FILE" > "${CHROME_STATE_FILE}.tmp" 2>/dev/null || true
         mv "${CHROME_STATE_FILE}.tmp" "$CHROME_STATE_FILE"
     fi
     echo "$profile_alias:$win_id" >> "$CHROME_STATE_FILE"
+    echo "    Saved window mapping: $profile_alias -> $win_id" >&2
 }
 
-# Check if a window ID still exists
+# Check if a window ID still exists (window might have been closed)
 window_exists() {
     local win_id="$1"
     wmctrl -l | grep -q "^$win_id "
 }
 
-# Get Chrome window for profile, reusing saved window if it still exists
 get_chrome_window() {
     local profile_alias="$1"
     local profile_dir="${CHROME_PROFILES[$profile_alias]}"
 
+    echo "  [Chrome] Looking for window with profile '$profile_alias' (dir: $profile_dir)..." >&2
+
     # First, check if we have a saved window for this profile that still exists
     local saved_win
     saved_win=$(get_saved_chrome_window "$profile_alias")
-    if [[ -n "$saved_win" ]] && window_exists "$saved_win" && ! is_window_used "$saved_win"; then
-        echo "Reusing existing Chrome window for profile: $profile_alias" >&2
-        mark_window_used "$saved_win"
-        echo "$saved_win"
-        return 0
+    if [[ -n "$saved_win" ]]; then
+        echo "    Found saved window ID: $saved_win" >&2
+        if window_exists "$saved_win" && ! is_window_used "$saved_win"; then
+            echo "Reusing existing Chrome window for profile: $profile_alias" >&2
+            echo "    Window still exists and is unused, reusing it" >&2
+            mark_window_used "$saved_win"
+            echo "$saved_win"
+            return 0
+        else
+            echo "    Saved window no longer exists or already used" >&2
+        fi
+    else
+        echo "    No saved window for this profile" >&2
     fi
 
     # No saved window available, create a new one with the correct profile
+    # We detect the new window by comparing window lists before/after launching Chrome
     local before_windows
     before_windows=$(wmctrl -l | grep -i "Chrome" | awk '{print $1}' | sort)
 
     echo "Launching Chrome window (profile: $profile_alias)..." >&2
+    echo "    Launching new Chrome with profile directory: $profile_dir" >&2
     nohup google-chrome --new-window --profile-directory="$profile_dir" "about:blank" > /dev/null 2>&1 &
     sleep 3
 
-    # Find the newly created window by comparing before/after
+    # Find the newly created window by comparing before/after window lists
     local after_windows
     after_windows=$(wmctrl -l | grep -i "Chrome" | awk '{print $1}' | sort)
 
@@ -283,19 +523,36 @@ get_chrome_window() {
     new_win=$(comm -13 <(echo "$before_windows") <(echo "$after_windows") | head -1)
 
     if [[ -n "$new_win" ]] && ! is_window_used "$new_win"; then
+        echo "    Detected new Chrome window: $new_win" >&2
         mark_window_used "$new_win"
         save_chrome_window "$profile_alias" "$new_win"
         echo "$new_win"
         return 0
+    else
+        echo "    Warning: Could not detect new Chrome window" >&2
     fi
 }
 
-# Get next available terminal window, or create one
+# =============================================================================
+# TERMINAL WINDOW MANAGEMENT
+#
+# Terminals are identified by common patterns in window titles:
+# - Application names: terminal, terminator, konsole, kitty, alacritty
+# - Shell prompt patterns: username@hostname (e.g., "ivan@desktop:")
+#
+# We exclude windows that might falsely match (VS Code's integrated terminal,
+# Chrome dev tools, etc.)
+# =============================================================================
+
 get_terminal_window() {
     local win
-    # Match terminals by common patterns: username@hostname, or terminal app names
+
+    echo "  [Terminal] Looking for available terminal window..." >&2
+
+    # Match terminals by common patterns, excluding non-terminal apps
     while IFS= read -r win; do
         if ! is_window_used "$win"; then
+            echo "    Found unused terminal window: $win" >&2
             mark_window_used "$win"
             echo "$win"
             return 0
@@ -303,21 +560,33 @@ get_terminal_window() {
     done < <(wmctrl -l | grep -iE "terminal|terminator|konsole|kitty|alacritty|@.*:" | grep -vi "Visual Studio Code\|Chrome\|Obsidian" | awk '{print $1}')
 
     # No available window, create one
+    echo "    No terminal windows available, creating new one..." >&2
     echo "Creating new terminal window..." >&2
     gnome-terminal &>/dev/null &
     sleep 2
     win=$(wmctrl -l | grep -iE "terminal|terminator|konsole|kitty|alacritty|@.*:" | grep -vi "Visual Studio Code\|Chrome\|Obsidian" | tail -1 | awk '{print $1}')
     if [[ -n "$win" ]] && ! is_window_used "$win"; then
+        echo "    Created new terminal window: $win" >&2
         mark_window_used "$win"
         echo "$win"
     fi
 }
 
-# Get next available Obsidian window
+# =============================================================================
+# OBSIDIAN WINDOW MANAGEMENT
+#
+# Obsidian is a note-taking app. We simply find windows with "Obsidian" in the title.
+# Unlike VS Code, we don't try to match specific vaults - just use available windows.
+# =============================================================================
+
 get_obsidian_window() {
     local win
+
+    echo "  [Obsidian] Looking for Obsidian window..." >&2
+
     while IFS= read -r win; do
         if ! is_window_used "$win"; then
+            echo "    Found Obsidian window: $win" >&2
             mark_window_used "$win"
             echo "$win"
             return 0
@@ -327,12 +596,21 @@ get_obsidian_window() {
     echo "Warning: No Obsidian window found. Please open Obsidian first." >&2
 }
 
-# Get next available TODO app window
+# =============================================================================
+# TODO APP WINDOW MANAGEMENT
+#
+# Matches common TODO applications by their window titles.
+# =============================================================================
+
 get_todo_window() {
     local win
+
+    echo "  [TODO] Looking for TODO app window..." >&2
+
     # Match common TODO apps: Todoist, Microsoft To Do, or window titled "Today"
     while IFS= read -r win; do
         if ! is_window_used "$win"; then
+            echo "    Found TODO app window: $win" >&2
             mark_window_used "$win"
             echo "$win"
             return 0
@@ -342,8 +620,30 @@ get_todo_window() {
     echo "Warning: No TODO app window found. Please open your TODO app first." >&2
 }
 
-# Process each workspace
+# =============================================================================
+# MAIN PROCESSING LOOP
+#
+# Process each workspace from the config:
+# 1. Switch context to the workspace
+# 2. For each window in the workspace:
+#    a. Find or create the appropriate application window
+#    b. Move it to the specified workspace
+#    c. Position it according to monitor + position preset
+# =============================================================================
+
+# Ensure enough virtual workspaces exist for the config
+# wmctrl -n sets the total number of desktops
+max_ws=$(jq '[.workspaces[].workspace] | max' "$CONFIG_FILE")
+required_ws=$((max_ws + 1))
+current_ws=$(wmctrl -d | wc -l)
+if (( required_ws > current_ws )); then
+    echo "Expanding virtual workspaces from $current_ws to $required_ws..."
+    wmctrl -n "$required_ws"
+fi
+
 num_workspaces=$(jq '.workspaces | length' "$CONFIG_FILE")
+echo ""
+echo "Processing $num_workspaces workspace(s)..."
 
 for ((ws_idx = 0; ws_idx < num_workspaces; ws_idx++)); do
     ws_name=$(jq -r ".workspaces[$ws_idx].name" "$CONFIG_FILE")
@@ -353,13 +653,17 @@ for ((ws_idx = 0; ws_idx < num_workspaces; ws_idx++)); do
     echo "=== $ws_name (workspace $((ws_num + 1))) ==="
 
     num_windows=$(jq ".workspaces[$ws_idx].windows | length" "$CONFIG_FILE")
+    echo "Processing $num_windows window(s)..."
 
     for ((win_idx = 0; win_idx < num_windows; win_idx++)); do
         app=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].app" "$CONFIG_FILE")
         monitor=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].monitor" "$CONFIG_FILE")
         position=$(jq -r ".workspaces[$ws_idx].windows[$win_idx].position" "$CONFIG_FILE")
 
-        # Get window ID
+        echo ""
+        echo "Window $((win_idx + 1))/$num_windows: $app -> $monitor/$position"
+
+        # Get or create the appropriate window based on app type
         win_id=""
         case "$app" in
             vscode)
@@ -381,6 +685,9 @@ for ((ws_idx = 0; ws_idx < num_workspaces; ws_idx++)); do
             todo)
                 win_id=$(get_todo_window)
                 ;;
+            *)
+                echo "  Warning: Unknown app type: $app" >&2
+                ;;
         esac
 
         if [[ -z "$win_id" ]]; then
@@ -388,12 +695,14 @@ for ((ws_idx = 0; ws_idx < num_workspaces; ws_idx++)); do
             continue
         fi
 
-        # Calculate position
+        # Calculate absolute screen coordinates for this window
         coords=$(calc_position "$monitor" "$position")
         IFS=',' read -r x y w h <<< "$coords"
 
-        # Move to workspace and position
+        # Move window to target workspace and position
+        # -i: use window ID (hex), -r: window to act on, -t: target workspace
         wmctrl -i -r "$win_id" -t "$ws_num"
+        # -e: geometry (gravity,x,y,width,height), gravity 0 = use default
         wmctrl -i -r "$win_id" -e "0,$x,$y,$w,$h"
 
         echo "Placed $app on $monitor ($position) -> ${w}x${h}+${x}+${y}"

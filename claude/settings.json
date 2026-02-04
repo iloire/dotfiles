@@ -1,4 +1,8 @@
 {
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+    "CLAUDE_CODE_VERBOSE": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(git,ls,cat,grep,find,mkdir,touch,echo)",
@@ -6,7 +10,12 @@
       "Read(./*)",
       "Write(./*)",
       "Glob(./*)",
-      "Grep(./*)"
+      "Grep(./*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)",
+      "Read(//usr/local/bin/**)"
     ],
     "deny": [
       "Bash(rm,curl,wget,sudo,apt,pip,brew)",
@@ -15,10 +24,6 @@
       "Write(/etc/*,/usr/*,/var/*,~/.ssh/*,~/.bash*)",
       "Read(/etc/*,/usr/*,/var/*,~/.ssh/*,~/.bash*)"
     ]
-  },
-  "env": {
-    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
-    "CLAUDE_CODE_VERBOSE": "1"
   },
   "hooks": {
     "PreToolUse": [
