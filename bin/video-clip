@@ -1,41 +1,59 @@
 #!/usr/bin/env bash
-# Extract a time segment from a video, optionally rotating 90° counter-clockwise.
+# Extract a time segment from a video, optionally rotating.
 #
-# Usage: video-clip <input> <start> <end> [--rotate] [-o output]
+# Usage: video-clip <input> [<start> <end>] [--cw|--ccw|--180] [-o output]
 #
 # Examples:
 #   video-clip input.mp4 00:01:30 00:02:00
-#   video-clip input.mp4 90 120 --rotate
-#   video-clip input.mp4 0 60 --rotate -o trimmed.mp4
+#   video-clip input.mp4 90 120 --cw
+#   video-clip input.mp4 --ccw -o rotated.mp4
 
 set -euo pipefail
 
 usage() {
-  echo "Usage: video-clip <input> <start> <end> [--rotate] [-o output]"
+  echo "Usage: video-clip <input> [<start> <end>] [--cw|--ccw|--180] [-o output]"
   echo ""
   echo "  <start>/<end>  Time in seconds or HH:MM:SS format"
-  echo "  --rotate       Rotate 90° counter-clockwise"
+  echo "  --cw           Rotate 90° clockwise"
+  echo "  --ccw          Rotate 90° counter-clockwise"
+  echo "  --180          Rotate 180°"
   echo "  -o <file>      Output filename (default: <input>_clip.<ext>)"
   exit 1
 }
 
-[[ $# -lt 3 ]] && usage
+[[ $# -lt 1 ]] && usage
 
 input="$1"
-start="$2"
-end="$3"
-shift 3
+shift
 
-rotate=false
+start=""
+end=""
+rotate=""
 output=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --rotate) rotate=true; shift ;;
+    --cw)  rotate=cw;  shift ;;
+    --ccw) rotate=ccw; shift ;;
+    --180) rotate=180; shift ;;
     -o) output="$2"; shift 2 ;;
-    *) echo "Unknown option: $1"; usage ;;
+    -*)  echo "Unknown option: $1"; usage ;;
+    *)
+      if [[ -z "$start" ]]; then
+        start="$1"
+      elif [[ -z "$end" ]]; then
+        end="$1"
+      else
+        echo "Unexpected argument: $1"; usage
+      fi
+      shift ;;
   esac
 done
+
+if [[ -n "$start" && -z "$end" ]]; then
+  echo "Error: both <start> and <end> are required when clipping"
+  exit 1
+fi
 
 [[ ! -f "$input" ]] && echo "File not found: $input" && exit 1
 
@@ -46,9 +64,16 @@ if [[ -z "$output" ]]; then
 fi
 
 vf_args=()
-$rotate && vf_args+=("transpose=2")
+case "$rotate" in
+  cw)  vf_args+=("transpose=1") ;;
+  ccw) vf_args+=("transpose=2") ;;
+  180) vf_args+=("transpose=1,transpose=1") ;;
+esac
 
-ffmpeg_args=(-i "$input" -ss "$start" -to "$end")
+ffmpeg_args=(-i "$input")
+if [[ -n "$start" ]]; then
+  ffmpeg_args+=(-ss "$start" -to "$end")
+fi
 
 if [[ ${#vf_args[@]} -gt 0 ]]; then
   ffmpeg_args+=(-vf "$(IFS=,; echo "${vf_args[*]}")")
