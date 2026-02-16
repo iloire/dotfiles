@@ -11,3 +11,5 @@ alias screenshotshadowoff="defaults write com.apple.screencapture disable-shadow
 alias screenshotshadowon="defaults write com.apple.screencapture disable-shadow -bool false;killall SystemUIServer"
 
 alias qmake=/usr/local/Cellar/qt/5.10.0/bin/qmake
+alias localip="ipconfig getifaddr en0"
+alias ips="ifconfig -a | grep -oE 'inet6? [^ ]+' | awk '{print \$2}'"

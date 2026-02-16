@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 alias pbcopy='xclip -selection clipboard'
 alias pbpaste='xclip -selection clipboard -o'
+alias localip="hostname -I | awk '{print \$1}'"
+alias ips="ip -o addr show | awk '/inet/ {print \$2, \$4}'"
 
 
