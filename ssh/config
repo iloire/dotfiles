@@ -36,13 +36,6 @@ Host *
 # Hosts
 # =============================================
 
-Host mcoe
-    Port 22
-    User memberscupofempathy.com
-    HostName memberscupofempathy.com.transurl.nl
-    HostkeyAlgorithms +ssh-rsa
-    PubkeyAcceptedAlgorithms +ssh-rsa
-
 Host peque
     Port 22
     User ivan
