@@ -41,6 +41,11 @@ Host peque
     User ivan
     HostName 192.168.1.67
 
+Host claw
+    Port 22
+    User clawdbot
+    HostName 192.168.1.71
+
 # Template for adding new hosts:
 # Host shortname
 #     HostName example.com
