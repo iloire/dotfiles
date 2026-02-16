@@ -10,12 +10,6 @@
   current = yellow reverse
   local = yellow
   remote = green
-[color "diff"]
-  meta = yellow bold
-  frag = magenta bold
-  old = red bold
-  new = green bold
-  whitespace = red reverse
 [color "status"]
   added = yellow
   changed = green
@@ -23,42 +17,67 @@
 [core]
   editor = nvim
   excludesfile = ~/.gitignore
-  pager = diff-so-fancy | less --tabs=4 -RFX
+  pager = delta
 
 [alias]
   st = status --short
   ci = commit
-  br = branch -a -v
-  b = for-each-ref --sort=-committerdate refs/heads/ --format='%(color:yellow)%(refname:short)|%(color:bold green)%(committerdate:relative)|%(color:blue)%(subject)|%(color:magenta)%(authorname)%(color:reset)'
   co = checkout
-
-    # Credit an author on the latest commit.
-    credit = "!f() { git commit --amend --author \"$1 <$2>\" -C HEAD; }; f"
-
-# Show the diff between the latest commit and the current state.
-    d = !"git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat"
-
-    # `git di $number` shows the diff between the state `$number` revisions ago and the current state.
-    di = !"d() { git diff --patch-with-stat HEAD~$1; }; git diff-index --quiet HEAD -- || clear; d"
-
   df = diff
   dc = diff --cached
+  br = branch -a -v
   lg = log -p
+  ls = ls-files
+
+  # Branches sorted by last commit date
+  b = for-each-ref --sort=-committerdate refs/heads/ --format='%(color:yellow)%(refname:short)|%(color:bold green)%(committerdate:relative)|%(color:blue)%(subject)|%(color:magenta)%(authorname)%(color:reset)'
+
+  # Pretty log
   lol = log --graph --pretty=format:'%Cred%h%Creset %C(cyan)%an%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
   lola = log --graph --pretty=format:'%Cred%h%Creset %C(cyan)%an%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative --all
-  ls = ls-files
+
+  # Show the diff between the latest commit and the current state
+  d = !"git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat"
+
+  # Show diff between state N revisions ago and current state
+  di = !"d() { git diff --patch-with-stat HEAD~$1; }; git diff-index --quiet HEAD -- || clear; d"
+
+  # Credit an author on the latest commit
+  credit = "!f() { git commit --amend --author \"$1 <$2>\" -C HEAD; }; f"
+
+  # Show branches containing a commit
   contains = !sh -c 'git branch -a --contains $1' -
 
-# Show files ignored by git:
+  # Show files ignored by git
   ign = ls-files -o -i --exclude-standard
-[difftool "sourcetree"]
-  cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-  path =
+[interactive]
+  diffFilter = delta --color-only
+[delta]
+  navigate = true
+  line-numbers = true
+  hyperlinks = true
+[diff]
+  algorithm = histogram
+  colorMoved = default
+[merge]
+  conflictstyle = diff3
+[commit]
+  verbose = true
+[fetch]
+  prune = true
+[rebase]
+  autosquash = true
+  autostash = true
+[rerere]
+  enabled = true
+[transfer]
+  fsckObjects = true
 [push]
   default = simple
 [filter "lfs"]
-  clean = git-lfs clean %f
-  smudge = git-lfs smudge %f
+  process = git-lfs filter-process
+  clean = git-lfs clean -- %f
+  smudge = git-lfs smudge -- %f
   required = true
 [pull]
   ff = only
