@@ -1,0 +1,57 @@
+# =============================================
+# Global defaults
+# =============================================
+
+Host *
+    # Reuse connections — second SSH to same host is instant
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 600
+
+    # Keep connections alive (prevent drops on idle)
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+    # Auto-add keys to ssh-agent on first use
+    AddKeysToAgent yes
+
+    # Only offer the key configured for this host
+    IdentitiesOnly yes
+
+    # Use strong crypto defaults
+    Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr
+    MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+    KexAlgorithms secdh521r1,curve25519-sha256,curve25519-sha256@libssh.org
+
+    # Prevent SSH from leaking your username to unknown hosts
+    StrictHostKeyChecking ask
+
+    # Hash known_hosts entries for privacy
+    HashKnownHosts yes
+
+    # Disable agent forwarding by default (enable per-host)
+    ForwardAgent no
+
+# =============================================
+# Hosts
+# =============================================
+
+Host mcoe
+    Port 22
+    User memberscupofempathy.com
+    HostName memberscupofempathy.com.transurl.nl
+    HostkeyAlgorithms +ssh-rsa
+    PubkeyAcceptedAlgorithms +ssh-rsa
+
+Host peque
+    Port 22
+    User ivan
+    HostName 192.168.1.67
+
+# Template for adding new hosts:
+# Host shortname
+#     HostName example.com
+#     User ivan
+#     Port 22
+#     IdentityFile ~/.ssh/id_ed25519
+#     ForwardAgent yes          # only if needed
