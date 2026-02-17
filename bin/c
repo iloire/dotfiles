@@ -1,14 +1,15 @@
 #!/bin/bash
 # Category: project
-# Description: Launch VS Code with predefined project folders
+# Description: Launch VS Code with predefined project folders or workspaces
 
-# VS Code launcher script with predefined folder mappings
-# Usage: c.sh <folder_name>
+# VS Code launcher script with predefined folder mappings and workspace support
+# Usage: c <name>
 
-# Command definitions: "command:description:path"
+WORKSPACES_DIR="$HOME/myconfig/organize-workspaces/workspaces"
+
+# Command definitions: "command:description:path[:extra_paths...]"
 declare -a COMMANDS=(
     "calma:Opens lacalmaeduca.com project:$HOME/code/lacalmaeduca.com/www-site"
-    "devil:Opens theflyingdevil.com project:$HOME/code/theflyingdevil.com"
     "dotfiles:Opens dotfiles directory:$HOME/dotfiles"
     "hosts:Opens hosts file:/etc/hosts"
     "ansible:Opens ansible directory:$HOME/code/ansible-recipes"
@@ -17,12 +18,28 @@ declare -a COMMANDS=(
     "notes:Opens notes directory:$HOME/notes"
 )
 
+# Collect workspace names from .code-workspace files
+get_workspaces() {
+    if [ -d "$WORKSPACES_DIR" ]; then
+        for f in "$WORKSPACES_DIR"/*.code-workspace; do
+            [ -f "$f" ] || continue
+            basename "$f" .code-workspace
+        done
+    fi
+}
+
 show_help() {
-    echo "Usage: c.sh <folder_name>"
-    echo "Available folders:"
+    echo "Usage: c <name>"
+    echo
+    echo "Workspaces (from $WORKSPACES_DIR):"
+    for ws in $(get_workspaces); do
+        printf "  %-18s - Opens %s workspace\n" "$ws" "$ws"
+    done
+    echo
+    echo "Folders:"
     for cmd in "${COMMANDS[@]}"; do
         IFS=':' read -r name desc path <<< "$cmd"
-        printf "  %-10s - %s\n" "$name" "$desc"
+        printf "  %-18s - %s\n" "$name" "$desc"
     done
 }
 
@@ -31,22 +48,24 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-# Find and execute command
-found=false
+# Check for a matching workspace file first
+ws_file="$WORKSPACES_DIR/$1.code-workspace"
+if [ -f "$ws_file" ]; then
+    code -n "$ws_file"
+    exit 0
+fi
+
+# Fall back to command definitions
 for cmd in "${COMMANDS[@]}"; do
     IFS=':' read -r name desc paths <<< "$cmd"
     if [ "$1" = "$name" ]; then
-        # Split paths by colon and open all of them
         IFS=':' read -ra path_array <<< "$paths"
         code -n "${path_array[@]}"
-        found=true
-        break
+        exit 0
     fi
 done
 
-if [ "$found" = false ]; then
-    echo "Unknown folder: $1"
-    echo
-    show_help
-    exit 1
-fi
+echo "Unknown name: $1"
+echo
+show_help
+exit 1
