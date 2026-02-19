@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Launch 5 panes: 3 Claude Code (left) + 2 terminals (right)
+# Usage: work [directory]
+#   directory: path to open in (defaults to current directory)
+
+DIR="${1:-.}"
+DIR="$(cd "$DIR" 2>/dev/null && pwd)" || { echo "Directory not found: $1"; exit 1; }
+SESSION="work"
+
+# Kill existing session if any
+tmux kill-session -t "$SESSION" 2>/dev/null
+
+# Create session (pane 0 - top left)
+tmux new-session -d -s "$SESSION" -c "$DIR"
+
+# Split into two columns: pane 0 (left), pane 1 (right)
+tmux split-window -h -t "$SESSION:0.0" -c "$DIR"
+
+# Split left column into 3 equal panes: pane 0 stays, add pane 2 and 3
+tmux split-window -v -t "$SESSION:0.0" -p 66 -c "$DIR"
+tmux split-window -v -t "$SESSION:0.1" -p 50 -c "$DIR"
+
+# Split right column into 2 equal panes
+tmux split-window -v -t "$SESSION:0.3" -p 50 -c "$DIR"
+
+# Launch claude in the 3 left panes
+for i in 0 1 2; do
+  tmux send-keys -t "$SESSION:0.$i" "claude" C-m
+done
+
+tmux select-pane -t "$SESSION:0.0"
+tmux attach -t "$SESSION"
