@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Kills all running ffmpeg processes.
+# Flow: report → kill → report again.
+
+set -euo pipefail
+
+DRY_RUN=false
+
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_RUN=true
+fi
+
+# Collect ffmpeg processes
+pids=()
+info=()
+
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  pid=$(echo "$line" | awk '{print $1}')
+  cmd=$(ps -p "$pid" -o args= 2>/dev/null) || continue
+  lstart=$(echo "$line" | awk '{$1=""; print $0}' | sed 's/^ //')
+  pids+=("$pid")
+  info+=("PID $pid (started: $lstart) — $cmd")
+done < <(pgrep -x ffmpeg | xargs -I{} ps -p {} -o pid=,lstart= 2>/dev/null)
+
+# Step 1: Report
+echo "=== Before ==="
+if (( ${#pids[@]} == 0 )); then
+  echo "No ffmpeg processes found."
+  exit 0
+fi
+echo "Found ${#pids[@]} ffmpeg process(es):"
+for i in "${info[@]}"; do
+  echo "  $i"
+done
+
+# Step 2: Kill
+echo ""
+echo "=== Killing ==="
+for i in "${!pids[@]}"; do
+  pid="${pids[$i]}"
+  if $DRY_RUN; then
+    echo "[dry-run] Would kill ${info[$i]}"
+  else
+    echo "Killing ${info[$i]}"
+    kill "$pid" 2>/dev/null || true
+  fi
+done
+
+# Brief pause to let processes exit
+sleep 1
+
+# Step 3: Report again
+echo ""
+echo "=== After ==="
+remaining=0
+for pid in "${pids[@]}"; do
+  if ps -p "$pid" &>/dev/null; then
+    echo "  Still alive: PID $pid"
+    ((remaining++))
+  fi
+done
+
+if (( remaining == 0 )); then
+  echo "All ffmpeg processes terminated successfully."
+else
+  echo "${remaining} process(es) still alive. Consider using: kill -9"
+fi
