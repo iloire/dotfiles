@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Kills Claude processes older than 30 minutes.
+# Flow: report → kill → report again.
+
+set -euo pipefail
+
+MAX_AGE_MIN=30
+DRY_RUN=false
+
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_RUN=true
+fi
+
+now=$(date +%s)
+
+# Collect old Claude processes
+old_pids=()
+old_info=()
+
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  pid=$(echo "$line" | awk '{print $1}')
+  lstart=$(echo "$line" | awk '{$1=""; print $0}' | sed 's/^ //')
+  start_epoch=$(date -d "$lstart" +%s 2>/dev/null) || continue
+  age_min=$(( (now - start_epoch) / 60 ))
+
+  if (( age_min >= MAX_AGE_MIN )); then
+    cmd=$(ps -p "$pid" -o args= 2>/dev/null) || continue
+    old_pids+=("$pid")
+    old_info+=("PID $pid (age: ${age_min}m) — $cmd")
+  fi
+done < <(pgrep -f '[c]laude' | xargs -I{} ps -p {} -o pid=,lstart= 2>/dev/null)
+
+# Step 1: Report
+echo "=== Before ==="
+if (( ${#old_pids[@]} == 0 )); then
+  echo "No Claude processes older than ${MAX_AGE_MIN}m found."
+  exit 0
+fi
+echo "Found ${#old_pids[@]} Claude process(es) older than ${MAX_AGE_MIN}m:"
+for info in "${old_info[@]}"; do
+  echo "  $info"
+done
+
+# Step 2: Kill
+echo ""
+echo "=== Killing ==="
+for i in "${!old_pids[@]}"; do
+  pid="${old_pids[$i]}"
+  if $DRY_RUN; then
+    echo "[dry-run] Would kill ${old_info[$i]}"
+  else
+    echo "Killing ${old_info[$i]}"
+    kill "$pid" 2>/dev/null || true
+  fi
+done
+
+# Brief pause to let processes exit
+sleep 1
+
+# Step 3: Report again
+echo ""
+echo "=== After ==="
+remaining=0
+for pid in "${old_pids[@]}"; do
+  if ps -p "$pid" &>/dev/null; then
+    echo "  Still alive: PID $pid"
+    ((remaining++))
+  fi
+done
+
+if (( remaining == 0 )); then
+  echo "All old Claude processes terminated successfully."
+else
+  echo "${remaining} process(es) still alive. Consider using: kill -9"
+fi
