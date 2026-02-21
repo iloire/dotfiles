@@ -51,7 +51,10 @@ fi
 # Check for a matching workspace file first
 ws_file="$WORKSPACES_DIR/$1.code-workspace"
 if [ -f "$ws_file" ]; then
-    code -n "$ws_file"
+    # Expand ~ to $HOME for cross-platform compatibility (macOS + Linux)
+    tmp_ws="$(mktemp /tmp/vscode-workspace-XXXXXX).code-workspace"
+    sed "s|~/|$HOME/|g" "$ws_file" > "$tmp_ws"
+    code -n "$tmp_ws"
     exit 0
 fi
 
