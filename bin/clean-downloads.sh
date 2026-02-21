@@ -2,6 +2,9 @@
 # Category: cleanup
 # Description: Remove old downloads by file type and age
 
+# Ensure standard paths are available (cron uses minimal PATH)
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
 # Downloads cleanup script for macOS and Linux
 # Cleans download directories based on age thresholds
 # Designed for crontab usage with detailed logging
