@@ -21,7 +21,7 @@ Host *
     # Use strong crypto defaults
     Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr
     MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
-    KexAlgorithms secdh521r1,curve25519-sha256,curve25519-sha256@libssh.org
+    KexAlgorithms ecdh-sha2-nistp521,curve25519-sha256,curve25519-sha256@libssh.org
 
     # Prevent SSH from leaking your username to unknown hosts
     StrictHostKeyChecking ask
