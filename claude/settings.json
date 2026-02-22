@@ -3,6 +3,10 @@
     "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
     "CLAUDE_CODE_VERBOSE": "1"
   },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Bash(git,ls,cat,grep,find,mkdir,touch,echo)",
@@ -18,7 +22,13 @@
       "Read(//usr/local/bin/**)",
       "Bash(grep:*)",
       "Bash(psql:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Read(//home/ivan/code/lanzarotenomad-v2/**)",
+      "Read(//media/ivan/DATA/code/lanzarotenomad-v2/**)",
+      "Read(//home/ivan/code/marketmind/**)",
+      "Read(//media/ivan/DATA/code/marketmind/**)",
+      "Read(//home/ivan/code/marketmind/prisma/**)",
+      "Read(//media/ivan/DATA/code/marketmind/prisma/**)"
     ],
     "deny": [
       "Bash(rm,curl,wget,sudo,apt,pip,brew)",
@@ -52,10 +62,6 @@
       }
     ]
   },
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  },
   "ignorePatterns": [
     "node_modules",
     ".git",
@@ -73,5 +79,6 @@
         "./*"
       ]
     }
-  }
+  },
+  "effortLevel": "medium"
 }
