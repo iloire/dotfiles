@@ -96,7 +96,7 @@ $DF_CMD -H | grep -vE '^Filesystem|tmpfs|cdrom' | awk '{ print $5 " " $1 }' | wh
 		echo "$msg" >>$LOGFILENAME
 		alert "Disk space: $partition is at $usep% (threshold: $ALERT%)"
 		info "Sending alert email..."
-		$HOME/dotfiles/bin/send-ses.sh "Alert on $hostname_value: Almost out of disk space $usep% (ALERT AT $ALERT%)" "$msg"
+		$HOME/dotfiles/bin/send-ses "Alert on $hostname_value: Almost out of disk space $usep% (ALERT AT $ALERT%)" "$msg"
 		if [ $? -eq 0 ]; then
 			info "Alert email sent successfully"
 		else
