@@ -21,18 +21,18 @@ if [ -z "$EMAIL" ]; then
 	exit 1
 fi
 
-# Detect OS and set AWS CLI path
-if [[ "$OSTYPE" == "darwin"* ]]; then
-	# macOS (Homebrew)
-	AWS_CMD="/opt/homebrew/bin/aws"
-else
-	# Linux
-	AWS_CMD="/usr/local/bin/aws"
-fi
+# This script is called from cron jobs, which have a minimal PATH.
+# Hardcoded paths ensure aws is found regardless of the environment.
+AWS_CMD=""
+for path in /snap/bin/aws /usr/local/bin/aws /usr/bin/aws /opt/homebrew/bin/aws; do
+	if [ -x "$path" ]; then
+		AWS_CMD="$path"
+		break
+	fi
+done
 
-# Verify command exists
-if [ ! -x "$AWS_CMD" ]; then
-	echo "ERROR: aws command not found or not executable: $AWS_CMD" >&2
+if [ -z "$AWS_CMD" ]; then
+	echo "ERROR: aws command not found" >&2
 	exit 1
 fi
 
