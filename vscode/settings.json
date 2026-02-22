@@ -99,5 +99,6 @@
     "workbench.secondarySideBar.defaultVisibility": "hidden",
     "chat.detectParticipant.enabled": false,
     "editor.fontVariations": false,
-    "editor.fontSize": 15
+    "editor.fontSize": 15,
+    "task.allowAutomaticTasks": "on"
 }
