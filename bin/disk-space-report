@@ -1,0 +1,392 @@
+#!/bin/bash
+# Category: system
+# Description: Generate a detailed disk space usage report in JSON format
+#
+# Produces a comprehensive disk space report covering:
+#   - Filesystem usage (df)
+#   - Top space-consuming directories
+#   - Largest files
+#   - Inode usage
+#   - Docker disk usage (if available)
+#   - Snap/Flatpak usage (if available)
+#   - Journal log size
+#   - Trash and cache sizes
+#
+# Output: JSON to stdout (pipe to file or jq for analysis)
+#
+# Usage: disk-space-report [OPTIONS]
+#   -o, --output FILE   Write report to file instead of stdout
+#   -d, --depth N       Directory scan depth (default: 2)
+#   -n, --top N         Number of top items to report (default: 20)
+#   --home-only         Only scan home directory (faster)
+#   -h, --help          Show this help message
+#
+# Examples:
+#   disk-space-report | jq '.filesystems'
+#   disk-space-report -o ~/disk-report-$(date +%Y%m%d).json
+#   disk-space-report --home-only -n 50
+
+set -uo pipefail
+
+# Defaults
+OUTPUT=""
+DEPTH=2
+TOP_N=20
+HOME_ONLY=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -o|--output) OUTPUT="$2"; shift 2 ;;
+        -d|--depth) DEPTH="$2"; shift 2 ;;
+        -n|--top) TOP_N="$2"; shift 2 ;;
+        --home-only) HOME_ONLY=true; shift ;;
+        -h|--help)
+            sed -n '2,/^$/s/^# \?//p' "$0"
+            exit 0
+            ;;
+        *) echo "Unknown option: $1" >&2; exit 1 ;;
+    esac
+done
+
+IS_MACOS=false
+[[ "$(uname)" == "Darwin" ]] && IS_MACOS=true || true
+
+TMPDIR_REPORT=$(mktemp -d)
+trap 'rm -rf "$TMPDIR_REPORT"' EXIT
+
+# --- Collect raw data into temp files, then assemble with python3 ---
+
+# 1. Filesystem usage
+if $IS_MACOS; then
+    df -lH 2>/dev/null | tail -n +2 > "$TMPDIR_REPORT/df_raw.txt"
+else
+    df -lhT 2>/dev/null | tail -n +2 > "$TMPDIR_REPORT/df_raw.txt"
+fi
+
+# 2. Inode usage
+df -li 2>/dev/null | tail -n +2 > "$TMPDIR_REPORT/inodes_raw.txt"
+
+# 3. Top directories
+SCAN_ROOT="/"
+$HOME_ONLY && SCAN_ROOT="$HOME"
+
+if $IS_MACOS; then
+    du -h -d "$DEPTH" "$SCAN_ROOT" 2>/dev/null | sort -rh | head -n "$TOP_N" > "$TMPDIR_REPORT/top_dirs.txt"
+else
+    du -h --max-depth="$DEPTH" "$SCAN_ROOT" 2>/dev/null | sort -rh | head -n "$TOP_N" > "$TMPDIR_REPORT/top_dirs.txt"
+fi
+
+# 4. Home directory breakdown
+if $IS_MACOS; then
+    du -h -d 1 "$HOME" 2>/dev/null | sort -rh > "$TMPDIR_REPORT/home_dirs.txt"
+else
+    du -h --max-depth=1 "$HOME" 2>/dev/null | sort -rh > "$TMPDIR_REPORT/home_dirs.txt"
+fi
+
+# 5. Largest files
+if $HOME_ONLY; then
+    find "$HOME" -xdev -type f -printf '%s\t%p\n' 2>/dev/null | sort -rn | head -n "$TOP_N" > "$TMPDIR_REPORT/largest_files.txt"
+else
+    find / -xdev -type f -printf '%s\t%p\n' 2>/dev/null | sort -rn | head -n "$TOP_N" > "$TMPDIR_REPORT/largest_files.txt"
+fi
+
+# 6. Docker
+if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+    docker system df 2>/dev/null > "$TMPDIR_REPORT/docker_df.txt"
+    docker system df -v 2>/dev/null > "$TMPDIR_REPORT/docker_df_v.txt"
+    echo "available" > "$TMPDIR_REPORT/docker_status.txt"
+else
+    echo "unavailable" > "$TMPDIR_REPORT/docker_status.txt"
+fi
+
+# 7. Snap
+if command -v snap &>/dev/null; then
+    snap list 2>/dev/null > "$TMPDIR_REPORT/snap_list.txt"
+    du -sh /snap/*/ 2>/dev/null | sort -rh > "$TMPDIR_REPORT/snap_sizes.txt"
+    echo "available" > "$TMPDIR_REPORT/snap_status.txt"
+else
+    echo "unavailable" > "$TMPDIR_REPORT/snap_status.txt"
+fi
+
+# 8. Flatpak
+if command -v flatpak &>/dev/null; then
+    flatpak list --app --columns=application,version,size 2>/dev/null > "$TMPDIR_REPORT/flatpak_list.txt"
+    du -sh /var/lib/flatpak 2>/dev/null | cut -f1 > "$TMPDIR_REPORT/flatpak_total.txt"
+    echo "available" > "$TMPDIR_REPORT/flatpak_status.txt"
+else
+    echo "unavailable" > "$TMPDIR_REPORT/flatpak_status.txt"
+fi
+
+# 9. Journal
+if command -v journalctl &>/dev/null; then
+    journalctl --disk-usage 2>/dev/null > "$TMPDIR_REPORT/journal.txt"
+fi
+
+# 10. Cache and trash sizes
+declare -A CACHE_SIZES
+for dir in "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.Trash" "$HOME/.npm" "$HOME/.cache/pip"; do
+    if [[ -d "$dir" ]]; then
+        du -sh "$dir" 2>/dev/null | cut -f1 > "$TMPDIR_REPORT/size_$(echo "$dir" | tr '/' '_').txt"
+    fi
+done
+# Cache breakdown
+if [[ -d "$HOME/.cache" ]]; then
+    du -sh "$HOME/.cache"/*/ 2>/dev/null | sort -rh | head -n 15 > "$TMPDIR_REPORT/cache_breakdown.txt"
+fi
+# node_modules
+find "$HOME" -maxdepth 5 -name "node_modules" -type d -prune 2>/dev/null > "$TMPDIR_REPORT/node_modules_paths.txt"
+if [[ -s "$TMPDIR_REPORT/node_modules_paths.txt" ]]; then
+    xargs du -shc < "$TMPDIR_REPORT/node_modules_paths.txt" 2>/dev/null | tail -1 | cut -f1 > "$TMPDIR_REPORT/node_modules_total.txt"
+fi
+
+# --- Assemble JSON with python3 ---
+export TMPDIR_REPORT HOME
+$HOME_ONLY && export HOME_ONLY="true" || export HOME_ONLY="false"
+
+assemble_json() {
+python3 << 'PYEOF'
+import json
+import os
+import re
+import socket
+import platform
+from datetime import datetime, timezone
+from pathlib import Path
+
+tmpdir = os.environ.get("TMPDIR_REPORT", "/tmp")
+home = os.environ.get("HOME", "/root")
+is_macos = platform.system() == "Darwin"
+scan_root = home if os.environ.get("HOME_ONLY") == "true" else "/"
+
+def read_file(name):
+    path = os.path.join(tmpdir, name)
+    if os.path.exists(path):
+        return open(path).read().strip()
+    return ""
+
+def read_lines(name):
+    content = read_file(name)
+    return [l for l in content.split("\n") if l.strip()] if content else []
+
+report = {}
+
+# Metadata
+report["report_metadata"] = {
+    "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "hostname": socket.gethostname(),
+    "kernel": platform.release(),
+    "os": platform.system(),
+    "home": home,
+}
+
+# Filesystems
+filesystems = []
+for line in read_lines("df_raw.txt"):
+    parts = line.split()
+    if len(parts) < 7:
+        continue
+    device, fstype, size, used, avail, pct = parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+    mount = " ".join(parts[6:])
+    if fstype in ("tmpfs", "devtmpfs", "squashfs", "overlay", "devfs"):
+        continue
+    if device in ("tmpfs", "devtmpfs", "none", "udev"):
+        continue
+    pct_val = pct.replace("%", "")
+    try:
+        pct_num = int(pct_val)
+    except ValueError:
+        pct_num = 0
+    filesystems.append({
+        "device": device, "fstype": fstype, "size": size,
+        "used": used, "available": avail, "use_percent": pct_num, "mount": mount
+    })
+report["filesystems"] = filesystems
+
+# Inodes
+inodes = []
+for line in read_lines("inodes_raw.txt"):
+    parts = line.split()
+    if len(parts) < 6:
+        continue
+    device, itotal, iused, ifree, ipct = parts[0], parts[1], parts[2], parts[3], parts[4]
+    mount = " ".join(parts[5:])
+    if any(x in device for x in ("tmpfs", "devtmpfs", "squashfs", "overlay")):
+        continue
+    if itotal in ("-", "0"):
+        continue
+    pct_val = ipct.replace("%", "")
+    try:
+        pct_num = int(pct_val)
+    except ValueError:
+        pct_num = 0
+    inodes.append({
+        "device": device, "total": itotal, "used": iused,
+        "free": ifree, "use_percent": pct_num, "mount": mount
+    })
+report["inodes"] = inodes
+
+# Top directories
+def parse_du_lines(name):
+    entries = []
+    for line in read_lines(name):
+        parts = line.split("\t", 1)
+        if len(parts) == 2:
+            entries.append({"size": parts[0].strip(), "path": parts[1].strip()})
+    return entries
+
+report["top_directories"] = {
+    "scan_root": scan_root,
+    "entries": parse_du_lines("top_dirs.txt"),
+}
+
+report["home_directory"] = {
+    "path": home,
+    "entries": parse_du_lines("home_dirs.txt"),
+}
+
+# Largest files
+largest = []
+for line in read_lines("largest_files.txt"):
+    parts = line.split("\t", 1)
+    if len(parts) == 2:
+        try:
+            bytes_val = int(parts[0].strip())
+        except ValueError:
+            continue
+        # Human readable
+        if bytes_val >= 1073741824:
+            human = f"{bytes_val / 1073741824:.1f}G"
+        elif bytes_val >= 1048576:
+            human = f"{bytes_val / 1048576:.1f}M"
+        elif bytes_val >= 1024:
+            human = f"{bytes_val / 1024:.1f}K"
+        else:
+            human = f"{bytes_val}B"
+        largest.append({"bytes": bytes_val, "size": human, "path": parts[1].strip()})
+report["largest_files"] = {
+    "scan_root": scan_root,
+    "entries": largest,
+}
+
+# Docker
+if read_file("docker_status.txt") == "available":
+    docker_info = {"available": True, "df": [], "images": [], "containers": [], "volumes": []}
+    raw_df = read_lines("docker_df.txt")
+    if len(raw_df) > 1:
+        for line in raw_df[1:]:
+            parts = line.split()
+            if len(parts) >= 5:
+                docker_info["df"].append({
+                    "type": parts[0],
+                    "total": parts[1],
+                    "active": parts[2],
+                    "size": parts[3],
+                    "reclaimable": " ".join(parts[4:]),
+                })
+    # Parse verbose output sections
+    verbose = read_file("docker_df_v.txt")
+    sections = re.split(r'\n(?=REPOSITORY|CONTAINER ID|VOLUME NAME|Local Volumes)', verbose)
+    for section in sections:
+        lines = [l for l in section.strip().split("\n") if l.strip()]
+        if not lines:
+            continue
+        if lines[0].startswith("REPOSITORY") or lines[0].startswith("Images"):
+            for line in lines[1:]:
+                if line.startswith("REPOSITORY") or not line.strip():
+                    continue
+                parts = line.split()
+                if len(parts) >= 4:
+                    docker_info["images"].append({
+                        "repository": parts[0],
+                        "tag": parts[1],
+                        "size": parts[-2] + parts[-1] if not parts[-1][0].isdigit() else parts[-1],
+                    })
+        elif lines[0].startswith("VOLUME NAME") or lines[0].startswith("Local Volumes"):
+            for line in lines[1:]:
+                if line.startswith("VOLUME NAME") or not line.strip():
+                    continue
+                parts = line.split()
+                if len(parts) >= 2:
+                    docker_info["volumes"].append({
+                        "name": parts[0][:12] + "..." if len(parts[0]) > 15 else parts[0],
+                        "size": parts[-1],
+                    })
+    report["docker"] = docker_info
+else:
+    report["docker"] = {"available": False}
+
+# Snap
+if read_file("snap_status.txt") == "available":
+    snap_info = []
+    snap_sizes = {}
+    for line in read_lines("snap_sizes.txt"):
+        parts = line.split("\t", 1)
+        if len(parts) == 2:
+            name = parts[1].strip().rstrip("/").split("/")[-1]
+            snap_sizes[name] = parts[0].strip()
+    snap_lines = read_lines("snap_list.txt")
+    for line in snap_lines[1:]:  # skip header
+        parts = line.split()
+        if len(parts) >= 4:
+            name = parts[0]
+            snap_info.append({
+                "name": name,
+                "version": parts[1],
+                "revision": parts[2],
+                "size": snap_sizes.get(name, "unknown"),
+            })
+    report["snap"] = snap_info
+else:
+    report["snap"] = None
+
+# Flatpak
+if read_file("flatpak_status.txt") == "available":
+    flatpak_info = {"total_size": read_file("flatpak_total.txt") or "unknown", "apps": []}
+    for line in read_lines("flatpak_list.txt"):
+        parts = line.split("\t")
+        if len(parts) >= 1:
+            flatpak_info["apps"].append({
+                "app": parts[0],
+                "version": parts[1] if len(parts) > 1 else "",
+                "size": parts[2] if len(parts) > 2 else "",
+            })
+    report["flatpak"] = flatpak_info
+else:
+    report["flatpak"] = None
+
+# Journal
+journal_text = read_file("journal.txt")
+journal_match = re.search(r'([\d.]+\s*[KMGT]i?B?)', journal_text) if journal_text else None
+report["journal_size"] = journal_match.group(1) if journal_match else None
+
+# Caches
+caches = {}
+
+def read_size_file(dir_path):
+    safe = "size_" + dir_path.replace("/", "_") + ".txt"
+    return read_file(safe) or "0"
+
+caches["trash"] = read_size_file(home + "/.local/share/Trash") or read_size_file(home + "/.Trash") or "0"
+caches["user_cache"] = read_size_file(home + "/.cache")
+caches["npm_cache"] = read_size_file(home + "/.npm")
+caches["pip_cache"] = read_size_file(home + "/.cache/pip")
+caches["cache_breakdown"] = parse_du_lines("cache_breakdown.txt")
+caches["node_modules_total"] = read_file("node_modules_total.txt") or "0"
+
+# Count node_modules directories
+nm_paths = read_lines("node_modules_paths.txt")
+caches["node_modules_count"] = len(nm_paths)
+
+report["caches"] = caches
+
+print(json.dumps(report, indent=2))
+PYEOF
+}
+
+# Execute
+if [[ -n "$OUTPUT" ]]; then
+    assemble_json > "$OUTPUT"
+    echo "Report written to $OUTPUT ($(du -sh "$OUTPUT" | cut -f1))" >&2
+else
+    assemble_json
+fi
