@@ -94,11 +94,12 @@
     "workbench.panel.chat.defaultPosition": "bottom",
     "github.copilot.chat.welcomeMessage": "never",
     "testing.openTesting": "neverOpen",
-    "terminal.integrated.launchTerminalOnStartup": false,
+    "terminal.integrated.hideOnStartup": "never",
     "testing.automaticallyOpenTestResults": "neverOpen",
     "workbench.secondarySideBar.defaultVisibility": "hidden",
     "chat.detectParticipant.enabled": false,
     "editor.fontVariations": false,
     "editor.fontSize": 15,
-    "task.allowAutomaticTasks": "on"
+    "task.allowAutomaticTasks": "on",
+    "security.workspace.trust.enabled": false
 }
