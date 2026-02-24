@@ -95,6 +95,7 @@
     "github.copilot.chat.welcomeMessage": "never",
     "testing.openTesting": "neverOpen",
     "terminal.integrated.hideOnStartup": "never",
+    "terminal.integrated.defaultLocation": "view",
     "testing.automaticallyOpenTestResults": "neverOpen",
     "workbench.secondarySideBar.defaultVisibility": "hidden",
     "chat.detectParticipant.enabled": false,
