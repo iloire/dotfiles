@@ -29,7 +29,13 @@ if test -f "$LOCAL_OVERRIDES"; then
   source $LOCAL_OVERRIDES
 fi
 
-export FZF_BASE=/usr/local/bin/fzf
+if [[ -d /opt/homebrew/opt/fzf ]]; then
+  export FZF_BASE=/opt/homebrew/opt/fzf
+elif [[ -d /usr/local/opt/fzf ]]; then
+  export FZF_BASE=/usr/local/opt/fzf
+elif [[ -d /usr/share/doc/fzf ]]; then
+  export FZF_BASE=/usr/share/doc/fzf
+fi
 source $ZSH/oh-my-zsh.sh
 
 source $SHELL_DIR/config
