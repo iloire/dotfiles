@@ -3,9 +3,11 @@
 # Description: Launch VS Code with predefined project folders or workspaces
 
 # VS Code launcher script with predefined folder mappings and workspace support
-# Usage: c <name>
+# Usage: c [name]  — with no args shows interactive numbered menu
 
 WORKSPACES_DIR="$HOME/myconfig/organize-workspaces/workspaces"
+COUNTS_FILE="$HOME/.cache/c-launcher/counts"
+MAX_RECENT=20
 
 # Command definitions: "command:description:path[:extra_paths...]"
 declare -a COMMANDS=(
@@ -18,7 +20,35 @@ declare -a COMMANDS=(
     "notes:Opens notes directory:$HOME/notes"
 )
 
-# Collect workspace names from .code-workspace files
+# --- Frequency tracking ---
+
+ensure_counts_file() {
+    mkdir -p "$(dirname "$COUNTS_FILE")"
+    touch "$COUNTS_FILE"
+}
+
+get_count() {
+    local name="$1"
+    local count
+    count=$(grep -m1 "^${name}=" "$COUNTS_FILE" 2>/dev/null | cut -d= -f2)
+    echo "${count:-0}"
+}
+
+bump_count() {
+    local name="$1"
+    ensure_counts_file
+    local current
+    current=$(get_count "$name")
+    local new=$((current + 1))
+    if grep -q "^${name}=" "$COUNTS_FILE" 2>/dev/null; then
+        sed -i "s/^${name}=.*/${name}=${new}/" "$COUNTS_FILE"
+    else
+        echo "${name}=${new}" >> "$COUNTS_FILE"
+    fi
+}
+
+# --- Helpers ---
+
 get_workspaces() {
     if [ -d "$WORKSPACES_DIR" ]; then
         for f in "$WORKSPACES_DIR"/*.code-workspace; do
@@ -28,8 +58,19 @@ get_workspaces() {
     fi
 }
 
+get_code_dirs() {
+    if [ -d "$HOME/code" ]; then
+        for d in "$HOME/code"/*/; do
+            [ -d "$d" ] || continue
+            basename "$d"
+        done
+    fi
+}
+
 show_help() {
-    echo "Usage: c <name>"
+    echo "Usage: c [name]"
+    echo
+    echo "Run without arguments for an interactive menu."
     echo
     echo "Workspaces (from $WORKSPACES_DIR):"
     for ws in $(get_workspaces); do
@@ -41,32 +82,149 @@ show_help() {
         IFS=':' read -r name desc path <<< "$cmd"
         printf "  %-18s - %s\n" "$name" "$desc"
     done
+    echo
+    echo "Any ~/code/<dir> name also works: c video-pipeline"
 }
 
+# --- Open actions (with tracking) ---
+
+open_workspace() {
+    local name="$1"
+    bump_count "$name"
+    local ws_file="$WORKSPACES_DIR/$name.code-workspace"
+    local tmp_ws
+    tmp_ws="$(mktemp /tmp/vscode-workspace-XXXXXX).code-workspace"
+    sed "s|~/|$HOME/|g" "$ws_file" > "$tmp_ws"
+    code -n "$tmp_ws"
+}
+
+open_command() {
+    local name="$1"
+    bump_count "$name"
+    for cmd in "${COMMANDS[@]}"; do
+        IFS=':' read -r cname _ paths <<< "$cmd"
+        if [ "$name" = "$cname" ]; then
+            IFS=':' read -ra path_array <<< "$paths"
+            code -n "${path_array[@]}"
+            return
+        fi
+    done
+}
+
+open_dir() {
+    local name="$1"
+    bump_count "$name"
+    code -n "$HOME/code/$name"
+}
+
+# --- Interactive menu ---
+
+show_interactive_menu() {
+    ensure_counts_file
+
+    # Collect known names from workspaces and commands (to avoid duplicates)
+    local known_names=()
+    for ws in $(get_workspaces); do
+        known_names+=("$ws")
+    done
+    for cmd in "${COMMANDS[@]}"; do
+        IFS=':' read -r name _ _ <<< "$cmd"
+        known_names+=("$name")
+    done
+
+    # ~/code directories — only the top N most opened, sorted by frequency
+    local dir_entries=()
+    for dir in $(get_code_dirs); do
+        local skip=false
+        for k in "${known_names[@]}"; do
+            if [ "$dir" = "$k" ]; then skip=true; break; fi
+        done
+        $skip && continue
+        local count
+        count=$(get_count "$dir")
+        [ "$count" -eq 0 ] && continue
+        dir_entries+=("$count:$dir")
+    done
+
+    # Sort by count descending and take top N
+    local recent_dirs=()
+    while IFS=: read -r count dir; do
+        [ -z "$dir" ] && continue
+        recent_dirs+=("$dir")
+    done <<< "$(printf '%s\n' "${dir_entries[@]}" | sort -t: -k1 -rn | head -n "$MAX_RECENT")"
+
+    # Display list — workspaces and commands by name, recent dirs by number
+    echo "Workspaces:"
+    for ws in $(get_workspaces); do
+        printf "  %-24s [workspace]\n" "$ws"
+    done
+    echo
+    echo "Folders:"
+    for cmd in "${COMMANDS[@]}"; do
+        IFS=':' read -r name desc _ <<< "$cmd"
+        printf "  %-24s %s\n" "$name" "$desc"
+    done
+
+    if [ ${#recent_dirs[@]} -gt 0 ]; then
+        echo
+        echo "Recent (open with: c <number>):"
+        local i=1
+        for dir in "${recent_dirs[@]}"; do
+            printf "  %2d) %-24s ~/code/%s\n" "$i" "$dir" "$dir"
+            ((i++))
+        done
+    fi
+
+    echo
+    echo "Tip: open any ~/code folder by name: c <folder>"
+
+    local choice="$1"
+    if [ -z "$choice" ]; then
+        exit 0
+    fi
+
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#recent_dirs[@]}" ]; then
+        echo "Invalid selection: $choice"
+        exit 1
+    fi
+
+    open_dir "${recent_dirs[$((choice - 1))]}"
+}
+
+# --- Main ---
+
 if [ $# -eq 0 ]; then
-    show_help
-    exit 1
+    show_interactive_menu
+    exit 0
+fi
+
+# Number argument → pick from menu directly
+if [[ "$1" =~ ^[0-9]+$ ]]; then
+    show_interactive_menu "$1"
+    exit 0
 fi
 
 # Check for a matching workspace file first
 ws_file="$WORKSPACES_DIR/$1.code-workspace"
 if [ -f "$ws_file" ]; then
-    # Expand ~ to $HOME for cross-platform compatibility (macOS + Linux)
-    tmp_ws="$(mktemp /tmp/vscode-workspace-XXXXXX).code-workspace"
-    sed "s|~/|$HOME/|g" "$ws_file" > "$tmp_ws"
-    code -n "$tmp_ws"
+    open_workspace "$1"
     exit 0
 fi
 
-# Fall back to command definitions
+# Check named commands
 for cmd in "${COMMANDS[@]}"; do
     IFS=':' read -r name desc paths <<< "$cmd"
     if [ "$1" = "$name" ]; then
-        IFS=':' read -ra path_array <<< "$paths"
-        code -n "${path_array[@]}"
+        open_command "$1"
         exit 0
     fi
 done
+
+# Check ~/code directories
+if [ -d "$HOME/code/$1" ]; then
+    open_dir "$1"
+    exit 0
+fi
 
 echo "Unknown name: $1"
 echo
