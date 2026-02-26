@@ -74,10 +74,10 @@ show_help() {
     echo
     echo "Workspaces (from $WORKSPACES_DIR):"
     for ws in $(get_workspaces); do
-        printf "  %-18s - Opens %s workspace\n" "$ws" "$ws"
+        printf "  %-18s\n" "$ws"
     done
     echo
-    echo "Folders:"
+    echo "Named shortcuts:"
     for cmd in "${COMMANDS[@]}"; do
         IFS=':' read -r name desc path <<< "$cmd"
         printf "  %-18s - %s\n" "$name" "$desc"
@@ -153,16 +153,10 @@ show_interactive_menu() {
         recent_dirs+=("$dir")
     done <<< "$(printf '%s\n' "${dir_entries[@]}" | sort -t: -k1 -rn | head -n "$MAX_RECENT")"
 
-    # Display list — workspaces and commands by name, recent dirs by number
-    echo "Workspaces:"
+    # Display list — workspaces by name, recent dirs by number
+    echo "Workspaces (open with: c <name>):"
     for ws in $(get_workspaces); do
-        printf "  %-24s [workspace]\n" "$ws"
-    done
-    echo
-    echo "Folders:"
-    for cmd in "${COMMANDS[@]}"; do
-        IFS=':' read -r name desc _ <<< "$cmd"
-        printf "  %-24s %s\n" "$name" "$desc"
+        printf "  %-24s\n" "$ws"
     done
 
     if [ ${#recent_dirs[@]} -gt 0 ]; then
