@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-awslogin() { saml2aws login && eval $(saml2aws script) }
+awslogin() { saml2aws login && eval $(saml2aws script); }
 
 backup() {
   echo backing up linux...
