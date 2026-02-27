@@ -3,7 +3,7 @@
 # Description: Sync local directories with GitHub repositories
 
 # Set PATH for cron environment
-PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH
+PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH
 
 # Parse command line arguments
 VERBOSE=false
