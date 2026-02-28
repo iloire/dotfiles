@@ -1,0 +1,180 @@
+#!/bin/bash
+# Category: git
+# Description: Fetch and interactively pull/rebase all repos in ~/code
+
+# Usage: git-sync-all [directory]
+#   directory  — parent directory to scan (default: ~/code)
+
+set -euo pipefail
+
+CODE_DIR="${1:-$HOME/code}"
+BOLD=$'\033[1m'
+DIM=$'\033[2m'
+GREEN=$'\033[32m'
+YELLOW=$'\033[33m'
+RED=$'\033[31m'
+CYAN=$'\033[36m'
+RESET=$'\033[0m'
+
+if [ ! -d "$CODE_DIR" ]; then
+    echo "Directory not found: $CODE_DIR"
+    exit 1
+fi
+
+ask_action() {
+    while true; do
+        echo -n "  ${CYAN}[p]ull  [r]ebase  [s]kip  [q]uit${RESET} > " >&2
+        read -r choice </dev/tty
+        case "$choice" in
+            p|pull)   echo "pull"; return ;;
+            r|rebase) echo "rebase"; return ;;
+            s|skip)   echo "skip"; return ;;
+            q|quit)   echo "quit"; return ;;
+            *)        echo "  Invalid choice. Use p/r/s/q." >&2 ;;
+        esac
+    done
+}
+
+synced=0
+skipped=0
+failed=0
+total=0
+
+echo "${BOLD}Scanning ${CODE_DIR}${RESET}"
+echo ""
+
+for dir in "$CODE_DIR"/*/; do
+    [ -d "$dir/.git" ] || continue
+    total=$((total + 1))
+
+    repo_name=$(basename "$dir")
+    echo "${BOLD}${repo_name}${RESET}"
+
+    # Fetch with timeout (15s) to avoid hanging on unreachable remotes
+    echo "  Fetching..."
+    git -C "$dir" fetch --quiet 2>/dev/null &
+    fetch_pid=$!
+    fetch_ok=false
+    for i in $(seq 1 15); do
+        if ! kill -0 "$fetch_pid" 2>/dev/null; then
+            wait "$fetch_pid" && fetch_ok=true
+            break
+        fi
+        sleep 1
+    done
+
+    if ! $fetch_ok; then
+        kill "$fetch_pid" 2>/dev/null
+        wait "$fetch_pid" 2>/dev/null
+        echo "  ${RED}Fetch failed or timed out${RESET}"
+        failed=$((failed + 1))
+        echo ""
+        continue
+    fi
+
+    # Determine tracking branch
+    tracking=$(git -C "$dir" rev-parse --abbrev-ref '@{upstream}' 2>/dev/null || true)
+    if [ -z "$tracking" ]; then
+        echo "  ${DIM}No upstream tracking branch — skipping${RESET}"
+        skipped=$((skipped + 1))
+        echo ""
+        continue
+    fi
+
+    echo "  Tracking: ${DIM}${tracking}${RESET}"
+
+    # Count commits behind/ahead
+    behind=$(git -C "$dir" rev-list --count HEAD.."$tracking" 2>/dev/null || echo 0)
+    ahead=$(git -C "$dir" rev-list --count "$tracking"..HEAD 2>/dev/null || echo 0)
+
+    # Check for local changes
+    local_changes="false"
+    if [ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]; then
+        local_changes="true"
+    fi
+
+    # Status line
+    echo -n "  ↓ ${behind} behind  ↑ ${ahead} ahead"
+    if [ "$local_changes" = "true" ]; then
+        echo -n "  ${YELLOW}(local changes)${RESET}"
+    fi
+    echo ""
+
+    # Already up to date
+    if [ "$behind" -eq 0 ]; then
+        echo "  ${GREEN}Up to date${RESET}"
+        skipped=$((skipped + 1))
+        echo ""
+        continue
+    fi
+
+    # Conflict detection: check if merge would conflict
+    has_conflicts=false
+    if [ "$ahead" -gt 0 ]; then
+        merge_base=$(git -C "$dir" merge-base HEAD "$tracking" 2>/dev/null || true)
+        if [ -n "$merge_base" ]; then
+            merge_result=$(git -C "$dir" merge-tree "$merge_base" HEAD "$tracking" 2>/dev/null || true)
+            if echo "$merge_result" | grep -q "^<<<<<<<"; then
+                has_conflicts=true
+                echo "  ${RED}CONFLICTS detected in:${RESET}"
+                echo "$merge_result" | grep "^+<<<<<<< " | sed 's/^+<<<<<<< .*//' | sort -u | while read -r f; do
+                    # Extract filenames from merge-tree output (lines after "changed in both")
+                    true
+                done
+                # Show which files both sides touched
+                git -C "$dir" diff --name-only "$merge_base"..HEAD 2>/dev/null | sort > /tmp/git-sync-local-$$
+                git -C "$dir" diff --name-only "$merge_base".."$tracking" 2>/dev/null | sort > /tmp/git-sync-remote-$$
+                comm -12 /tmp/git-sync-local-$$ /tmp/git-sync-remote-$$ | while read -r f; do
+                    echo "    ${RED}${f}${RESET}"
+                done
+                rm -f /tmp/git-sync-local-$$ /tmp/git-sync-remote-$$
+                echo "  ${YELLOW}You may want to skip and resolve this manually${RESET}"
+            else
+                echo "  ${YELLOW}Branches diverged but no conflicts detected${RESET}"
+            fi
+        fi
+    fi
+
+    # Has updates — ask user
+    action=$(ask_action)
+
+    case "$action" in
+        pull)
+            echo "  Pulling..."
+            if git -C "$dir" pull --ff 2>&1 | sed 's/^/    /'; then
+                echo "  ${GREEN}Done.${RESET} New commits:"
+                git -C "$dir" log --color --pretty=oneline --abbrev-commit HEAD@{1}.. 2>/dev/null | sed 's/^/    /'
+                synced=$((synced + 1))
+            else
+                echo "  ${RED}Pull failed. You may need to resolve conflicts manually.${RESET}"
+                failed=$((failed + 1))
+            fi
+            ;;
+        rebase)
+            echo "  Rebasing..."
+            if git -C "$dir" pull --rebase 2>&1 | sed 's/^/    /'; then
+                echo "  ${GREEN}Done.${RESET} Rebased commits:"
+                git -C "$dir" log --color --pretty=oneline --abbrev-commit HEAD@{1}.. 2>/dev/null | sed 's/^/    /'
+                synced=$((synced + 1))
+            else
+                echo "  ${RED}Rebase failed. Resolve conflicts, then run:${RESET}"
+                echo "    ${YELLOW}cd ${dir} && git rebase --continue${RESET}"
+                echo "    ${DIM}Or abort with: git rebase --abort${RESET}"
+                failed=$((failed + 1))
+            fi
+            ;;
+        skip)
+            echo "  ${DIM}Skipped${RESET}"
+            skipped=$((skipped + 1))
+            ;;
+        quit)
+            echo ""
+            echo "Aborted."
+            exit 0
+            ;;
+    esac
+    echo ""
+done
+
+echo "---"
+echo "${BOLD}Summary:${RESET} ${total} repos scanned, ${GREEN}${synced} synced${RESET}, ${skipped} skipped, $([ "$failed" -gt 0 ] && echo "${RED}${failed} failed${RESET}" || echo "0 failed")"
