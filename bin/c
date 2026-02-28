@@ -41,7 +41,11 @@ bump_count() {
     current=$(get_count "$name")
     local new=$((current + 1))
     if grep -q "^${name}=" "$COUNTS_FILE" 2>/dev/null; then
-        sed -i "s/^${name}=.*/${name}=${new}/" "$COUNTS_FILE"
+        if [[ "$OSTYPE" == darwin* ]]; then
+            sed -i '' "s/^${name}=.*/${name}=${new}/" "$COUNTS_FILE"
+        else
+            sed -i "s/^${name}=.*/${name}=${new}/" "$COUNTS_FILE"
+        fi
     else
         echo "${name}=${new}" >> "$COUNTS_FILE"
     fi
