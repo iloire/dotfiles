@@ -163,17 +163,27 @@ sync_directory() {
         log_message "Repository setup completed successfully"
     fi
 
-    # Pull latest changes from GitHub
-    log_message "Pulling latest changes from $REPO_URL..."
-    if [ "$VERBOSE" = true ]; then
-        git pull origin "$BRANCH" 2>&1 | tee -a "$LOG_FILE"
-    else
-        git pull origin "$BRANCH" >> "$LOG_FILE" 2>&1
-    fi
-    if [ $? -eq 0 ]; then
-        log_message "Successfully pulled latest changes"
-    else
-        error_message "Failed to pull from remote repository"
+    # Pull latest changes from GitHub (retry up to 3 times for transient failures)
+    local PULL_SUCCESS=false
+    for attempt in 1 2 3; do
+        log_message "Pulling latest changes from $REPO_URL (attempt $attempt/3)..."
+        if [ "$VERBOSE" = true ]; then
+            git pull origin "$BRANCH" 2>&1 | tee -a "$LOG_FILE"
+        else
+            git pull origin "$BRANCH" >> "$LOG_FILE" 2>&1
+        fi
+        if [ $? -eq 0 ]; then
+            log_message "Successfully pulled latest changes"
+            PULL_SUCCESS=true
+            break
+        fi
+        if [ $attempt -lt 3 ]; then
+            log_message "Pull failed, retrying in 5 seconds..."
+            sleep 5
+        fi
+    done
+    if [ "$PULL_SUCCESS" = false ]; then
+        error_message "Failed to pull from remote repository after 3 attempts"
         return 1
     fi
 
