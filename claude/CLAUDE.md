@@ -27,6 +27,8 @@
 - Use for all configuration — never hardcode credentials
 - Centralized env validation with Zod (fail fast at startup)
 - Never access `process.env` directly — use a validated `Env` module
+- **Next.js projects**: Use `.env.local` and `.env.prod` only (no `.env` file)
+- Env files are encrypted in the repo with **git-crypt** (key: `~/git-crypt-key`)
 
 ### Input Handling
 - Validate and sanitize all inputs before processing (Zod)
