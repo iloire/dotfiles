@@ -1,9 +1,6 @@
 [init]
   templatedir = ~/dotfiles/git/templates
   defaultBranch = main
-[user]
-  name = ivan l.
-  email = 317868+iloire@users.noreply.github.com
 [color]
   ui = auto
 [color "branch"]
@@ -81,3 +78,5 @@
   required = true
 [pull]
   ff = only
+[include]
+  path = ~/.gitconfig.local
