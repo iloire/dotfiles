@@ -60,6 +60,15 @@ Avoid generic "AI slop" aesthetics. Create distinctive frontends.
 - Cookie-cutter layouts and predictable component patterns
 - Converging on common "safe" choices
 
+## Deployment & Versioning
+
+### Git Commit SHA in Footer
+- All web projects must display the short git commit SHA (first 7 chars) in the page footer
+- Use `VERCEL_GIT_COMMIT_SHA` env var (provided automatically by Vercel)
+- Add it as optional in the Zod env schema
+- Render conditionally: only show when the env var is present (won't appear in local dev)
+- Style: `text-[10px] font-mono` with muted color matching the footer theme
+
 ## Commit Messages
 
 **Format**: `<type>: <description> - <details>`
@@ -67,6 +76,7 @@ Avoid generic "AI slop" aesthetics. Create distinctive frontends.
 **Types**: `feat`, `fix`, `docs`, `refactor`
 
 **Rules**:
+- **Auto-commit**: Always commit after every change unless told otherwise
 - One commit per feature/task
 - Specific, descriptive messages (not "implement tasks" or "update code")
 - No references to AI tools
