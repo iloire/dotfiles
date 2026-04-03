@@ -1,5 +1,5 @@
 # Security hardening against supply chain attacks
-# TODO: min-release-age=7d — broken in npm 11.11.0 (Invalid time value bug), re-enable when fixed
+# TODO: min-release-age=7d — blocked by npm/cli#9005 (breaks with ~ version ranges), re-enable when fixed
 registry=https://registry.npmjs.org/
 strict-ssl=true
 ignore-scripts=true
