@@ -25,6 +25,7 @@ done
 # Configuration
 CONFIG_FILE="$HOME/github_sync.conf"  # Config file in home directory
 LOG_FILE="$HOME/sync_log.txt"
+FAILURES_FILE="$HOME/sync_failures.txt"
 
 # Check if config file exists
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -235,6 +236,9 @@ sync_directory() {
 }
 
 # Main loop: Read config file and sync directories
+# Clear failures file at the start of each run
+> "$FAILURES_FILE"
+
 log_message "Starting GitHub sync script"
 log_message "Using config file: $CONFIG_FILE"
 
@@ -269,7 +273,9 @@ while IFS='=' read -r DIR CONFIG; do
     fi
 
     if [ -n "$DIR" ] && [ -n "$REPO_URL" ] && [ -n "$BRANCH" ]; then
-        sync_directory "$DIR" "$REPO_URL" "$BRANCH"
+        if ! sync_directory "$DIR" "$REPO_URL" "$BRANCH"; then
+            echo "$DIR" >> "$FAILURES_FILE"
+        fi
     else
         error_message "Invalid config entry for $DIR"
     fi

@@ -42,3 +42,12 @@ source $SHELL_DIR/config
 
 ~/dotfiles/bin/check-cookies-being-cleaned.py
 
+# Warn about failed GitHub syncs
+if [[ -s "$HOME/sync_failures.txt" ]]; then
+  echo "\033[33m⚠ GitHub sync failed for:\033[0m"
+  while IFS= read -r dir; do
+    echo "  - $dir"
+  done < "$HOME/sync_failures.txt"
+  echo "Check ~/sync_log.txt for details."
+fi
+
