@@ -86,3 +86,5 @@ Avoid generic "AI slop" aesthetics. Create distinctive frontends.
 - **CHANGELOG.md**: Changes in reverse-chronological order with UTC timestamps (YYYY-MM-DD HH:MM)
 - **DOCS.md**: Project architecture
 - Keep documentation up to date when modifying features
+
+@RTK.md
