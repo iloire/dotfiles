@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=WhisperTux
+Comment=Voice-to-text using whisper.cpp
+Exec=/usr/local/bin/whispertux
+Terminal=false
+Type=Application
+Categories=Utility;Audio;
+Icon=audio-input-microphone
