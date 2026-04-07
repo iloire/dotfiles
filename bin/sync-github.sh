@@ -34,6 +34,11 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
+# Check for internet connectivity (exit silently to avoid cron mail spam)
+if ! ping -c 1 -W 3 github.com >/dev/null 2>&1; then
+    exit 0
+fi
+
 # Add timestamp to log messages
 log_message() {
     local MESSAGE="$1"
