@@ -1,0 +1,204 @@
+#!/bin/bash
+# Category: system
+# Description: Send server health metrics to Devil Watchdog
+# Usage: send-watchdog-report [options]
+#
+# Collects disk, memory, CPU, and service metrics and sends them
+# to the Devil Watchdog server report endpoint.
+#
+# Options (via environment variables):
+#   WATCHDOG_API_KEY       - Required. API key (dw_...) from your project dashboard.
+#   WATCHDOG_SERVICES      - Optional. Comma-separated systemd services to monitor (e.g. "nginx,postgres,docker").
+#
+# Options (via flags):
+#   -v, --verbose          Enable verbose output
+#   -h, --help             Show this help message
+#
+# Exit codes:
+#   Always exits 0 to avoid breaking calling scripts.
+#   Errors are logged to ~/.watchdog-report.log
+
+WATCHDOG_URL="https://devilwatchdog.vercel.app/api/servers/report"
+WATCHDOG_LOG="$HOME/.watchdog-report.log"
+WATCHDOG_TIMEOUT=10
+WATCHDOG_RETRIES=2
+
+VERBOSE=false
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >>"$WATCHDOG_LOG"
+}
+
+info() {
+    if [ "$VERBOSE" = true ]; then
+        echo "$1"
+    fi
+}
+
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        -v|--verbose) VERBOSE=true ;;
+        -h|--help)
+            sed -n '2,/^$/s/^# \?//p' "$0"
+            exit 0
+            ;;
+        *) echo "Unknown option: $1" >&2; exit 0 ;;
+    esac
+    shift
+done
+
+if [ -z "$WATCHDOG_API_KEY" ]; then
+    log "SKIP: WATCHDOG_API_KEY not set"
+    exit 0
+fi
+
+HOSTNAME=$(hostname | sed 's/\.local$//')
+info "Collecting metrics for $HOSTNAME..."
+
+# --- Disk ---
+collect_disk() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        /bin/df -k | grep -vE '^Filesystem|tmpfs|devfs|map ' | grep -v '/System/Volumes' | awk '$1 ~ /^\/dev\// {
+            total=$2*1024; used=$3*1024; pct=$5+0;
+            gsub(/%/,"",pct);
+            printf "{\"mount\":\"%s\",\"total\":%d,\"used\":%d,\"percent\":%d},", $9, total, used, pct
+        }'
+    else
+        /bin/df -B1 --output=target,size,used,pcent | tail -n +2 | grep -vE 'tmpfs|devtmpfs|udev|snap' | awk '{
+            pct=$4+0; gsub(/%/,"",pct);
+            printf "{\"mount\":\"%s\",\"total\":%d,\"used\":%d,\"percent\":%d},", $1, $2, $3, pct
+        }'
+    fi
+}
+
+DISK_JSON=$(collect_disk | sed 's/,$//')
+info "Disk: [$DISK_JSON]"
+
+# --- Memory ---
+collect_memory() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: use vm_stat and sysctl
+        PAGE_SIZE=$(sysctl -n hw.pagesize)
+        TOTAL=$(sysctl -n hw.memsize)
+        VM_STAT=$(vm_stat)
+        FREE_PAGES=$(echo "$VM_STAT" | awk '/Pages free/ {gsub(/\./,"",$3); print $3}')
+        INACTIVE_PAGES=$(echo "$VM_STAT" | awk '/Pages inactive/ {gsub(/\./,"",$3); print $3}')
+        SPECULATIVE_PAGES=$(echo "$VM_STAT" | awk '/Pages speculative/ {gsub(/\./,"",$3); print $3}')
+        AVAILABLE=$(( (FREE_PAGES + INACTIVE_PAGES + SPECULATIVE_PAGES) * PAGE_SIZE ))
+        USED=$(( TOTAL - AVAILABLE ))
+        # macOS swap: "total = 10240.00M  used = 8657.69M  free = 1582.31M"
+        SWAP_INFO=$(sysctl -n vm.swapusage 2>/dev/null)
+        SWAP_TOTAL=$(echo "$SWAP_INFO" | awk '{gsub(/M/,"",$3); printf "%.0f", $3*1048576}')
+        SWAP_USED=$(echo "$SWAP_INFO" | awk '{gsub(/M/,"",$6); printf "%.0f", $6*1048576}')
+    else
+        # Linux: use /proc/meminfo
+        TOTAL=$(awk '/^MemTotal/ {print $2*1024}' /proc/meminfo)
+        AVAILABLE=$(awk '/^MemAvailable/ {print $2*1024}' /proc/meminfo)
+        USED=$(( TOTAL - AVAILABLE ))
+        SWAP_TOTAL=$(awk '/^SwapTotal/ {print $2*1024}' /proc/meminfo)
+        SWAP_USED=$(awk '/^SwapFree/ {print $2*1024}' /proc/meminfo)
+        SWAP_USED=$(( SWAP_TOTAL - SWAP_USED ))
+    fi
+
+    printf '{"total":%d,"used":%d,"available":%d,"swap_total":%d,"swap_used":%d}' \
+        "${TOTAL:-0}" "${USED:-0}" "${AVAILABLE:-0}" "${SWAP_TOTAL:-0}" "${SWAP_USED:-0}"
+}
+
+MEMORY_JSON=$(collect_memory)
+info "Memory: $MEMORY_JSON"
+
+# --- CPU ---
+collect_cpu() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        CORES=$(sysctl -n hw.ncpu)
+        CPU_USAGE=$(ps -A -o %cpu | awk '{sum+=$1} END {printf "%.1f", sum/'"$CORES"'}')
+        read LOAD1 LOAD5 LOAD15 <<< $(sysctl -n vm.loadavg | awk '{print $2, $3, $4}')
+    else
+        CORES=$(nproc)
+        # Sample /proc/stat for ~1 second
+        read -r _ u1 n1 s1 i1 w1 _ < /proc/stat
+        sleep 1
+        read -r _ u2 n2 s2 i2 w2 _ < /proc/stat
+        ACTIVE=$(( (u2+n2+s2) - (u1+n1+s1) ))
+        IDLE=$(( i2 - i1 ))
+        TOTAL_DIFF=$(( ACTIVE + IDLE + (w2-w1) ))
+        if [ "$TOTAL_DIFF" -gt 0 ]; then
+            CPU_USAGE=$(awk "BEGIN {printf \"%.1f\", $ACTIVE * 100.0 / $TOTAL_DIFF}")
+        else
+            CPU_USAGE="0.0"
+        fi
+        read LOAD1 LOAD5 LOAD15 _ < /proc/loadavg
+    fi
+
+    printf '{"usage_percent":%s,"load_1m":%s,"load_5m":%s,"load_15m":%s,"cores":%d}' \
+        "$CPU_USAGE" "$LOAD1" "$LOAD5" "$LOAD15" "$CORES"
+}
+
+CPU_JSON=$(collect_cpu)
+info "CPU: $CPU_JSON"
+
+# --- Services ---
+collect_services() {
+    if [ -z "$WATCHDOG_SERVICES" ]; then
+        return
+    fi
+
+    IFS=',' read -ra SERVICES <<< "$WATCHDOG_SERVICES"
+    local result=""
+    for svc in "${SERVICES[@]}"; do
+        svc=$(echo "$svc" | xargs) # trim whitespace
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            if pgrep -x "$svc" >/dev/null 2>&1; then
+                running="true"
+            else
+                running="false"
+            fi
+        else
+            if systemctl is-active --quiet "$svc" 2>/dev/null; then
+                running="true"
+            else
+                running="false"
+            fi
+        fi
+        result="${result}{\"name\":\"$svc\",\"running\":$running},"
+    done
+    echo "$result" | sed 's/,$//'
+}
+
+SERVICES_JSON=$(collect_services)
+info "Services: [$SERVICES_JSON]"
+
+# --- Build payload ---
+PAYLOAD="{\"hostname\":\"$HOSTNAME\""
+PAYLOAD="$PAYLOAD,\"disk\":[$DISK_JSON]"
+PAYLOAD="$PAYLOAD,\"memory\":$MEMORY_JSON"
+PAYLOAD="$PAYLOAD,\"cpu\":$CPU_JSON"
+
+if [ -n "$SERVICES_JSON" ]; then
+    PAYLOAD="$PAYLOAD,\"services\":[$SERVICES_JSON]"
+fi
+
+PAYLOAD="$PAYLOAD}"
+
+info "Payload: $PAYLOAD"
+
+# --- Send report ---
+HTTP_CODE=$(curl -s -L -o /dev/null -w "%{http_code}" \
+    -X POST "$WATCHDOG_URL" \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: $WATCHDOG_API_KEY" \
+    -m "$WATCHDOG_TIMEOUT" \
+    --retry "$WATCHDOG_RETRIES" \
+    --retry-delay 1 \
+    --retry-connrefused \
+    -d "$PAYLOAD" 2>>"$WATCHDOG_LOG")
+
+if [ "$HTTP_CODE" = "200" ]; then
+    log "OK: report sent for $HOSTNAME"
+    info "Report sent successfully (HTTP $HTTP_CODE)"
+else
+    log "WARN: report for $HOSTNAME — HTTP $HTTP_CODE"
+    info "Report failed (HTTP $HTTP_CODE)"
+fi
+
+exit 0
