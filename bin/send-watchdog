@@ -1,0 +1,97 @@
+#!/bin/bash
+# Category: system
+# Description: Send events to Devil Watchdog monitoring service
+# Usage: send-watchdog <channel> <name> [severity] [description]
+#
+# Examples:
+#   send-watchdog "disk" "disk.space.warning" "error" "Partition /dev/sda1 at 95%"
+#   send-watchdog "backups" "backup.complete" "info"
+#   send-watchdog "maintenance" "cleanup.done"
+#
+# Options (via environment variables):
+#   WATCHDOG_API_KEY   - Required. API key (dw_...) from your project dashboard.
+#   WATCHDOG_NOTIFY    - Optional. Set to "true" to trigger notifications. Default: false.
+#   WATCHDOG_TAGS      - Optional. Comma-separated tags (e.g. "production,frontend").
+#   WATCHDOG_METADATA  - Optional. JSON object string (e.g. '{"host":"web1"}').
+#   WATCHDOG_ICON      - Optional. Emoji icon for the event.
+#
+# Exit codes:
+#   Always exits 0 to avoid breaking calling scripts.
+#   Errors are logged to ~/.watchdog.log
+
+WATCHDOG_URL="https://devilwatchdog.vercel.app/api/events"
+WATCHDOG_LOG="$HOME/.watchdog.log"
+WATCHDOG_TIMEOUT=5
+WATCHDOG_RETRIES=2
+
+CHANNEL="$1"
+NAME="$2"
+SEVERITY="${3:-info}"
+DESCRIPTION="${4:-}"
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >>"$WATCHDOG_LOG"
+}
+
+if [ -z "$WATCHDOG_API_KEY" ]; then
+    log "SKIP: WATCHDOG_API_KEY not set"
+    exit 0
+fi
+
+if [ -z "$CHANNEL" ] || [ -z "$NAME" ]; then
+    log "ERROR: usage: send-watchdog <channel> <name> [severity] [description]"
+    exit 0
+fi
+
+# Build JSON payload
+JSON=$(cat <<EOF
+{
+  "channel": "$CHANNEL",
+  "name": "$NAME",
+  "severity": "$SEVERITY"
+EOF
+)
+
+# Append optional fields
+if [ -n "$DESCRIPTION" ]; then
+    JSON="$JSON, \"description\": \"$DESCRIPTION\""
+fi
+
+if [ "${WATCHDOG_NOTIFY:-false}" = "true" ]; then
+    JSON="$JSON, \"notify\": true"
+fi
+
+if [ -n "$WATCHDOG_ICON" ]; then
+    JSON="$JSON, \"icon\": \"$WATCHDOG_ICON\""
+fi
+
+if [ -n "$WATCHDOG_TAGS" ]; then
+    # Convert comma-separated tags to JSON array: "a,b" -> ["a","b"]
+    TAGS_JSON=$(echo "$WATCHDOG_TAGS" | awk -F',' '{for(i=1;i<=NF;i++) printf "%s\"%s\"", (i>1?",":""), $i; print ""}')
+    JSON="$JSON, \"tags\": [$TAGS_JSON]"
+fi
+
+if [ -n "$WATCHDOG_METADATA" ]; then
+    JSON="$JSON, \"metadata\": $WATCHDOG_METADATA"
+fi
+
+JSON="$JSON}"
+
+# Send event — fire and forget, never fail the caller
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST "$WATCHDOG_URL" \
+    -H "Content-Type: application/json" \
+    -H "x-api-key: $WATCHDOG_API_KEY" \
+    -m "$WATCHDOG_TIMEOUT" \
+    --retry "$WATCHDOG_RETRIES" \
+    --retry-delay 1 \
+    --retry-connrefused \
+    -d "$JSON" 2>>"$WATCHDOG_LOG")
+
+if [ "$HTTP_CODE" = "201" ]; then
+    log "OK: $CHANNEL/$NAME ($SEVERITY)"
+else
+    log "WARN: $CHANNEL/$NAME ($SEVERITY) — HTTP $HTTP_CODE"
+fi
+
+exit 0

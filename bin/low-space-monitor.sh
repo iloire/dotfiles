@@ -102,6 +102,7 @@ $DF_CMD -H | grep -vE '^Filesystem|tmpfs|cdrom' | awk '{ print $5 " " $1 }' | wh
 		else
 			error "Failed to send alert email"
 		fi
+		WATCHDOG_NOTIFY=true $HOME/dotfiles/bin/send-watchdog "disk" "disk.space.warning" "error" "Partition $partition at $usep% on $hostname_value"
 	fi
 done
 

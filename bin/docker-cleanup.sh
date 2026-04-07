@@ -221,3 +221,8 @@ else
     log_summary "Docker cleanup completed: freed at least $(format_bytes $TOTAL_BYTES_FREED) from logs (build cache and images reclaimed separately)"
 fi
 log "=============================================="
+
+if [ "$DRY_RUN" = false ]; then
+    WATCHDOG_METADATA="{\"bytes_freed\":$TOTAL_BYTES_FREED}" \
+        $HOME/dotfiles/bin/send-watchdog "maintenance" "docker.cleanup.complete" "info" "Freed $(format_bytes $TOTAL_BYTES_FREED) on $(hostname)"
+fi

@@ -257,6 +257,7 @@ if [ $TAR_STATUS -eq 0 ]; then
     fi
 else
     echo "$DATE_STR - ERROR: Failed to create archive! Exit code: $TAR_STATUS"
+    WATCHDOG_NOTIFY=true $HOME/dotfiles/bin/send-watchdog "backups" "backup.failed" "error" "tar failed with exit code $TAR_STATUS on $(hostname)"
     exit 1
 fi
 
@@ -301,6 +302,7 @@ if [ "$REMOTE_BACKUP" = "true" ]; then
         scp -v "$LOG_FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH" 2>&1
     else
         echo "$DATE_STR - ERROR: Transfer failed! Exit code: $SCP_STATUS"
+        WATCHDOG_NOTIFY=true $HOME/dotfiles/bin/send-watchdog "backups" "backup.transfer.failed" "error" "scp failed with exit code $SCP_STATUS on $(hostname)"
         exit 1
     fi
 else
@@ -315,3 +317,6 @@ TOTAL_TIME=$(($(date +%s) - START_TIME))
 TOTAL_MIN=$((TOTAL_TIME / 60))
 TOTAL_SEC=$((TOTAL_TIME % 60))
 echo "$DATE_STR - Total execution time: $TOTAL_MIN minutes and $TOTAL_SEC seconds"
+
+WATCHDOG_METADATA="{\"duration_min\":$TOTAL_MIN,\"size\":\"$BACKUP_SIZE\"}" \
+    $HOME/dotfiles/bin/send-watchdog "backups" "backup.complete" "info" "Backup completed in ${TOTAL_MIN}m ${TOTAL_SEC}s on $(hostname)"

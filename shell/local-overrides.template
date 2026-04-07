@@ -14,6 +14,10 @@ export ADMIN_EMAIL="your-email@example.com"
 # OPTIONAL VARIABLES
 # ==============================================================================
 
+# Devil Watchdog API key for event monitoring (https://devilwatchdog.vercel.app)
+# Used by: bin/send-watchdog
+# export WATCHDOG_API_KEY="dw_your-api-key-here"
+
 # AWS Configuration (if using AWS SES for email notifications)
 # Note: AWS credentials should be in ~/.aws/credentials under [email] profile
 # export AWS_DEFAULT_REGION="us-east-1"
