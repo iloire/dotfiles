@@ -50,6 +50,7 @@ Host hassio
     Port 22
     User root
     HostName hassio.local
+    IdentityFile ~/.ssh/id_rsa
 
 # Template for adding new hosts:
 # Host shortname
