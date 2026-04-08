@@ -183,7 +183,8 @@ PAYLOAD="$PAYLOAD}"
 info "Payload: $PAYLOAD"
 
 # --- Send report ---
-HTTP_CODE=$(curl -s -L -o /dev/null -w "%{http_code}" \
+RESPONSE_BODY=$(mktemp)
+HTTP_CODE=$(curl -s -L -o "$RESPONSE_BODY" -w "%{http_code}" \
     -X POST "$WATCHDOG_URL" \
     -H "Content-Type: application/json" \
     -H "x-api-key: $WATCHDOG_API_KEY" \
@@ -198,7 +199,10 @@ if [ "$HTTP_CODE" = "200" ]; then
     info "Report sent successfully (HTTP $HTTP_CODE)"
 else
     log "WARN: report for $HOSTNAME — HTTP $HTTP_CODE"
+    log "  Payload: $PAYLOAD"
+    log "  Response: $(cat "$RESPONSE_BODY")"
     info "Report failed (HTTP $HTTP_CODE)"
 fi
+rm -f "$RESPONSE_BODY"
 
 exit 0
