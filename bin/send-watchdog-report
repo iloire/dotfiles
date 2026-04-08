@@ -93,11 +93,11 @@ collect_memory() {
         SWAP_USED=$(echo "$SWAP_INFO" | awk '{gsub(/M/,"",$6); printf "%.0f", $6*1048576}')
     else
         # Linux: use /proc/meminfo
-        TOTAL=$(awk '/^MemTotal/ {print $2*1024}' /proc/meminfo)
-        AVAILABLE=$(awk '/^MemAvailable/ {print $2*1024}' /proc/meminfo)
+        TOTAL=$(awk '/^MemTotal/ {printf "%.0f", $2*1024}' /proc/meminfo)
+        AVAILABLE=$(awk '/^MemAvailable/ {printf "%.0f", $2*1024}' /proc/meminfo)
         USED=$(( TOTAL - AVAILABLE ))
-        SWAP_TOTAL=$(awk '/^SwapTotal/ {print $2*1024}' /proc/meminfo)
-        SWAP_USED=$(awk '/^SwapFree/ {print $2*1024}' /proc/meminfo)
+        SWAP_TOTAL=$(awk '/^SwapTotal/ {printf "%.0f", $2*1024}' /proc/meminfo)
+        SWAP_USED=$(awk '/^SwapFree/ {printf "%.0f", $2*1024}' /proc/meminfo)
         SWAP_USED=$(( SWAP_TOTAL - SWAP_USED ))
     fi
 
