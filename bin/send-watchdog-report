@@ -24,6 +24,7 @@ WATCHDOG_TIMEOUT=10
 WATCHDOG_RETRIES=2
 
 VERBOSE=false
+export LC_NUMERIC=C
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >>"$WATCHDOG_LOG"
@@ -61,12 +62,12 @@ collect_disk() {
         /bin/df -k | grep -vE '^Filesystem|tmpfs|devfs|map ' | grep -v '/System/Volumes' | awk '$1 ~ /^\/dev\// {
             total=$2*1024; used=$3*1024; pct=$5+0;
             gsub(/%/,"",pct);
-            printf "{\"mount\":\"%s\",\"total\":%d,\"used\":%d,\"percent\":%d},", $9, total, used, pct
+            printf "{\"mount\":\"%s\",\"total\":%s,\"used\":%s,\"percent\":%d},", $9, total, used, pct
         }'
     else
         /bin/df -B1 --output=target,size,used,pcent | tail -n +2 | grep -vE 'tmpfs|devtmpfs|udev|snap' | awk '{
             pct=$4+0; gsub(/%/,"",pct);
-            printf "{\"mount\":\"%s\",\"total\":%d,\"used\":%d,\"percent\":%d},", $1, $2, $3, pct
+            printf "{\"mount\":\"%s\",\"total\":%s,\"used\":%s,\"percent\":%d},", $1, $2, $3, pct
         }'
     fi
 }
@@ -100,7 +101,7 @@ collect_memory() {
         SWAP_USED=$(( SWAP_TOTAL - SWAP_USED ))
     fi
 
-    printf '{"total":%d,"used":%d,"available":%d,"swap_total":%d,"swap_used":%d}' \
+    printf '{"total":%s,"used":%s,"available":%s,"swap_total":%s,"swap_used":%s}' \
         "${TOTAL:-0}" "${USED:-0}" "${AVAILABLE:-0}" "${SWAP_TOTAL:-0}" "${SWAP_USED:-0}"
 }
 
