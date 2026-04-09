@@ -291,8 +291,10 @@ log_message "Script completed"
 # Report to watchdog
 if [ -s "$FAILURES_FILE" ]; then
     FAIL_COUNT=$(wc -l < "$FAILURES_FILE" | tr -d ' ')
+    WATCHDOG_METADATA="{\"machine\":\"$(hostname)\",\"fail_count\":$FAIL_COUNT}" \
     WATCHDOG_NOTIFY=true \
-        $HOME/dotfiles/bin/send-watchdog "backups" "github.sync.failed" "error" "$FAIL_COUNT repos failed to sync on $(hostname)"
+        $HOME/dotfiles/bin/send-watchdog "backups" "github.sync.failed" "error" "$FAIL_COUNT repos failed to sync"
 else
+    WATCHDOG_METADATA="{\"machine\":\"$(hostname)\"}" \
     $HOME/dotfiles/bin/send-watchdog "backups" "github.sync.complete" "info"
 fi

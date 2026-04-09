@@ -179,8 +179,8 @@ if not run_clean:
 if run_clean:
     send_watchdog = os.path.join(home_dir, 'dotfiles', 'bin', 'send-watchdog')
     hostname = socket.gethostname()
-    metadata = json.dumps({"cookies_deleted": total_deleted, "cookies_kept": total_kept, "profiles": len(chrome_profiles)})
-    description = f"Deleted {total_deleted} cookies, kept {total_kept} across {len(chrome_profiles)} profiles on {hostname}"
+    metadata = json.dumps({"machine": hostname, "cookies_deleted": total_deleted, "cookies_kept": total_kept, "profiles": len(chrome_profiles)})
+    description = f"Deleted {total_deleted} cookies, kept {total_kept} across {len(chrome_profiles)} profiles"
     env = os.environ.copy()
     env["WATCHDOG_METADATA"] = metadata
     try:
