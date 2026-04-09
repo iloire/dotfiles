@@ -223,6 +223,6 @@ fi
 log "=============================================="
 
 if [ "$DRY_RUN" = false ]; then
-    WATCHDOG_METADATA="{\"bytes_freed\":$TOTAL_BYTES_FREED}" \
+    WATCHDOG_METADATA="{\"bytes_freed\":$TOTAL_BYTES_FREED,\"dangling_images\":$dangling_count,\"stopped_containers\":$stopped_count,\"unused_volumes\":$unused_vols}" \
         $HOME/dotfiles/bin/send-watchdog "maintenance" "docker.cleanup.complete" "info" "Freed $(format_bytes $TOTAL_BYTES_FREED) on $(hostname)"
 fi

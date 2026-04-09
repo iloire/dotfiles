@@ -21,6 +21,9 @@ import datetime
 import re
 import glob
 import argparse
+import subprocess
+import socket
+import json
 from sys import platform
 
 # Parse command line arguments
@@ -171,3 +174,16 @@ info(f"Total cookies {'removed' if run_clean else 'to remove'}: {total_deleted}"
 
 if not run_clean:
     info("\nRun with --clean flag to actually remove cookies")
+
+# Send watchdog event (always, as heartbeat)
+if run_clean:
+    send_watchdog = os.path.join(home_dir, 'dotfiles', 'bin', 'send-watchdog')
+    hostname = socket.gethostname()
+    metadata = json.dumps({"cookies_deleted": total_deleted, "cookies_kept": total_kept, "profiles": len(chrome_profiles)})
+    description = f"Deleted {total_deleted} cookies, kept {total_kept} across {len(chrome_profiles)} profiles on {hostname}"
+    env = os.environ.copy()
+    env["WATCHDOG_METADATA"] = metadata
+    try:
+        subprocess.run([send_watchdog, "maintenance", "cookies.cleaned", "info", description], env=env)
+    except Exception:
+        pass

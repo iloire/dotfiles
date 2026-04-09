@@ -214,7 +214,7 @@ if [ "$TOTAL_FILES_DELETED" -gt 0 ] || [ "$TOTAL_DIRS_DELETED" -gt 0 ] || [ "$VE
     log "=============================================="
 fi
 
-if [ "$DRY_RUN" = false ] && { [ "$TOTAL_FILES_DELETED" -gt 0 ] || [ "$TOTAL_DIRS_DELETED" -gt 0 ]; }; then
-    WATCHDOG_METADATA="{\"files_deleted\":$TOTAL_FILES_DELETED,\"bytes_freed\":$TOTAL_BYTES_FREED}" \
+if [ "$DRY_RUN" = false ]; then
+    WATCHDOG_METADATA="{\"files_deleted\":$TOTAL_FILES_DELETED,\"dirs_deleted\":$TOTAL_DIRS_DELETED,\"bytes_freed\":$TOTAL_BYTES_FREED}" \
         $HOME/dotfiles/bin/send-watchdog "maintenance" "downloads.cleaned" "info" "Deleted $TOTAL_FILES_DELETED files, freed $(format_bytes $TOTAL_BYTES_FREED) on $(hostname)"
 fi
