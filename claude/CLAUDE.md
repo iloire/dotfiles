@@ -7,11 +7,6 @@
 
 ## Code Quality
 
-### Error Handling
-- Structured error handling with specific failure modes (try-catch with custom error types)
-- Verify preconditions before critical or irreversible operations
-- Timeout and cancellation mechanisms for long-running operations (e.g., `AbortController`)
-
 ### Type Safety (TypeScript projects)
 - Strict mode: `noImplicitAny`, `strictNullChecks`
 - No `any` types
@@ -30,35 +25,9 @@
 - **Next.js projects**: Use `.env.local` and `.env.prod` only (no `.env` file)
 - Env files are encrypted in the repo with **git-crypt** (key: `~/git-crypt-key`)
 
-### Input Handling
-- Validate and sanitize all inputs before processing (Zod)
-- Strict path validation to prevent traversal attacks
-
-### Unsafe Practices to Avoid
-- `eval` and unsanitized shell calls
-- Command injection vectors
-- Logging sensitive data (passwords, tokens, etc.)
-
 ## Frontend Aesthetics
-
-Avoid generic "AI slop" aesthetics. Create distinctive frontends.
-
-### Typography
-- Choose distinctive, beautiful fonts
-- Avoid: Arial, Inter, Roboto, system fonts, Space Grotesk
-
-### Color & Theme
-- Dominant colors with sharp accents — not timid, evenly-distributed palettes
-- Avoid: purple gradients on white backgrounds
-- Use CSS variables for consistency
-
-### Motion & Animation
-- Prioritize CSS-only solutions; use Motion library for React
-- High-impact moments over scattered micro-interactions
-
-### Anti-Patterns
-- Cookie-cutter layouts and predictable component patterns
-- Converging on common "safe" choices
+- Use the **frontend-design** skill when building UI
+- Avoid generic "AI slop" aesthetics — create distinctive frontends
 
 ## Preferred Stack
 - **Vercel** + **Next.js** when they make sense for the project (web apps, marketing sites, APIs)
@@ -69,11 +38,8 @@ Avoid generic "AI slop" aesthetics. Create distinctive frontends.
 ## Deployment & Versioning
 
 ### Git Commit SHA in Footer
-- All web projects must display the short git commit SHA (first 7 chars) in the page footer
-- Use `VERCEL_GIT_COMMIT_SHA` env var (provided automatically by Vercel)
-- Add it as optional in the Zod env schema
-- Render conditionally: only show when the env var is present (won't appear in local dev)
-- Style: `text-[10px] font-mono` with muted color matching the footer theme
+- Web projects: display short commit SHA (7 chars) in the footer using `VERCEL_GIT_COMMIT_SHA`
+- Render conditionally (only when env var is present)
 
 ## Commit Messages
 
@@ -83,6 +49,7 @@ Avoid generic "AI slop" aesthetics. Create distinctive frontends.
 
 **Rules**:
 - **Auto-commit**: Always commit after every change unless told otherwise
+- Run lint and typecheck before committing
 - One commit per feature/task
 - Specific, descriptive messages (not "implement tasks" or "update code")
 - No references to AI tools
