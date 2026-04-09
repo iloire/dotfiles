@@ -60,6 +60,12 @@ Avoid generic "AI slop" aesthetics. Create distinctive frontends.
 - Cookie-cutter layouts and predictable component patterns
 - Converging on common "safe" choices
 
+## Preferred Stack
+- **Vercel** + **Next.js** when they make sense for the project (web apps, marketing sites, APIs)
+- **Supabase** for backend services (auth, database, storage)
+- **Turso** (libSQL) for small projects — lightweight and fast
+- **Redis** (Upstash) for caching, rate limiting, queues — pairs well with Vercel
+
 ## Deployment & Versioning
 
 ### Git Commit SHA in Footer
@@ -84,7 +90,6 @@ Avoid generic "AI slop" aesthetics. Create distinctive frontends.
 ## Documentation
 
 - **CHANGELOG.md**: Changes in reverse-chronological order with UTC timestamps (YYYY-MM-DD HH:MM)
-- **DOCS.md**: Project architecture
-- Keep documentation up to date when modifying features
+- **/docs folder**: Project architecture. Keep documentation up to date when modifying features
 
 @RTK.md
