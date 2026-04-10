@@ -189,7 +189,7 @@ sync_directory() {
         fi
     done
     if [ "$PULL_SUCCESS" = false ]; then
-        error_message "Failed to pull from remote repository after 3 attempts"
+        error_message "Failed to pull $BRANCH from $REPO_URL (in $DIR) after 3 attempts"
         return 1
     fi
 
