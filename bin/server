@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Category: network
+# Description: Start an HTTP server from the current directory
+set -euo pipefail
+
+# Colors
+BOLD=$'\033[1m'
+DIM=$'\033[2m'
+GREEN=$'\033[1;32m'
+YELLOW=$'\033[1;33m'
+CYAN=$'\033[1;36m'
+MAGENTA=$'\033[1;35m'
+BLUE=$'\033[1;34m'
+RED=$'\033[1;31m'
+RESET=$'\033[0m'
+
+port="${1:-8000}"
+dir="$(pwd)"
+
+# Pick the right URL opener for the platform
+if command -v xdg-open >/dev/null 2>&1; then
+	opener=xdg-open
+elif command -v open >/dev/null 2>&1; then
+	opener=open
+else
+	opener=""
+fi
+
+# Resolve a non-loopback IP for LAN sharing (best-effort)
+if command -v hostname >/dev/null 2>&1 && hostname -I >/dev/null 2>&1; then
+	lan_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+elif command -v ipconfig >/dev/null 2>&1; then
+	lan_ip="$(ipconfig getifaddr en0 2>/dev/null || true)"
+else
+	lan_ip=""
+fi
+
+printf '\n'
+printf '%s╭─────────────────────────────────────────────╮%s\n' "$CYAN" "$RESET"
+printf '%s│%s  %sHTTP Server%s                                %s│%s\n' "$CYAN" "$RESET" "$BOLD" "$RESET" "$CYAN" "$RESET"
+printf '%s╰─────────────────────────────────────────────╯%s\n' "$CYAN" "$RESET"
+printf '  %s▸%s directory  %s%s%s\n' "$MAGENTA" "$RESET" "$DIM" "$dir" "$RESET"
+printf '  %s▸%s port       %s%s%s\n' "$MAGENTA" "$RESET" "$YELLOW" "$port" "$RESET"
+printf '  %s▸%s local      %s→ http://localhost:%s/%s\n' "$MAGENTA" "$RESET" "$GREEN" "$port" "$RESET"
+if [ -n "$lan_ip" ]; then
+	printf '  %s▸%s network    %s→ http://%s:%s/%s\n' "$MAGENTA" "$RESET" "$GREEN" "$lan_ip" "$port" "$RESET"
+fi
+if [ -n "$opener" ]; then
+	printf '  %s▸%s opener     %s%s%s\n' "$MAGENTA" "$RESET" "$BLUE" "$opener" "$RESET"
+fi
+printf '\n%s  Press Ctrl+C to stop%s\n\n' "$DIM" "$RESET"
+
+# Auto-open browser once the port is up (best-effort, non-blocking)
+if [ -n "$opener" ]; then
+	(sleep 1 && "$opener" "http://localhost:${port}/" >/dev/null 2>&1 || true) &
+fi
+
+# Pick a Python interpreter
+if command -v python3 >/dev/null 2>&1; then
+	py=python3
+elif command -v python >/dev/null 2>&1; then
+	py=python
+else
+	printf '%s✗ python3 not found%s\n' "$RED" "$RESET" >&2
+	exit 1
+fi
+
+exec "$py" -c '
+import http.server, socketserver, sys
+port = int(sys.argv[1])
+handler = http.server.SimpleHTTPRequestHandler
+m = handler.extensions_map
+m[""] = "text/plain"
+for k, v in list(m.items()):
+    if "charset" not in v:
+        m[k] = v + "; charset=UTF-8"
+socketserver.TCPServer.allow_reuse_address = True
+with socketserver.TCPServer(("", port), handler) as httpd:
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print()
+        sys.exit(0)
+' "$port"
