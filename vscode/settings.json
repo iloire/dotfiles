@@ -102,5 +102,6 @@
     "editor.fontVariations": false,
     "editor.fontSize": 15,
     "task.allowAutomaticTasks": "on",
-    "security.workspace.trust.enabled": false
+    "security.workspace.trust.enabled": false,
+    "terminal.integrated.gpuAcceleration": "off"
 }
