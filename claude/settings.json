@@ -189,7 +189,13 @@
       "Bash(find /Users/ivan/code/fatri/fatri-web -name *DbContext* -o -name *Entities*)",
       "Bash(chmod +x /Users/ivan/code/fatri/fatri-web/config/switch-config.sh)",
       "Bash(find /Users/ivan/code/fatri/fatri-web -type d -name *admin*)",
-      "Bash(find /Users/ivan/code/fatri/fatri-web -type f -name *.ts -o -name *.tsx -o -name *.js)"
+      "Bash(find /Users/ivan/code/fatri/fatri-web -type f -name *.ts -o -name *.tsx -o -name *.js)",
+      "Bash(find /Users/ivan/code/fatri/fatri-web -path *Views*Error* -type f)",
+      "WebFetch(domain:www.amazon.com)",
+      "WebFetch(domain:fixcal.io)",
+      "WebFetch(domain:clawdis.ai)",
+      "WebFetch(domain:lander.studio)",
+      "WebFetch(domain:nova.lightmode.io)"
     ],
     "deny": [
       "Bash(rm,curl,wget,sudo,apt,pip,brew)",
