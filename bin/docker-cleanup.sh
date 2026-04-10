@@ -110,7 +110,7 @@ if [ -d "$LOGS_DIR" ]; then
     log_size=0
     log_count=0
     while IFS= read -r logfile; do
-        size=$(stat -c%s "$logfile" 2>/dev/null || echo 0)
+        size=$(stat -c%s "$logfile" 2>/dev/null || stat -f%z "$logfile" 2>/dev/null || echo 0)
         if [ "$size" -gt 0 ]; then
             log_size=$((log_size + size))
             log_count=$((log_count + 1))
@@ -141,7 +141,8 @@ if [ "$DRY_RUN" = true ]; then
     log "[DRY-RUN] Would prune build cache (current size: $cache_size)"
 else
     output=$(docker builder prune -a -f 2>/dev/null)
-    reclaimed=$(echo "$output" | grep -oP 'Total reclaimed space: \K.*' || echo "0B")
+    reclaimed=$(echo "$output" | sed -n 's/.*Total reclaimed space: //p' | tail -1)
+    [ -z "$reclaimed" ] && reclaimed="0B"
     log "Build cache pruned (reclaimed: $reclaimed)"
 fi
 
@@ -154,7 +155,8 @@ if [ "$dangling_count" -gt 0 ]; then
         log "[DRY-RUN] Would remove $dangling_count dangling images"
     else
         output=$(docker image prune -f 2>/dev/null)
-        reclaimed=$(echo "$output" | grep -oP 'Total reclaimed space: \K.*' || echo "0B")
+        reclaimed=$(echo "$output" | sed -n 's/.*Total reclaimed space: //p' | tail -1)
+        [ -z "$reclaimed" ] && reclaimed="0B"
         log "Removed $dangling_count dangling images (reclaimed: $reclaimed)"
     fi
 else
@@ -171,7 +173,8 @@ if [ "$stopped_count" -gt 0 ]; then
         log "[DRY-RUN] Would remove $stopped_count stopped containers: $stopped_names"
     else
         output=$(docker container prune -f 2>/dev/null)
-        reclaimed=$(echo "$output" | grep -oP 'Total reclaimed space: \K.*' || echo "0B")
+        reclaimed=$(echo "$output" | sed -n 's/.*Total reclaimed space: //p' | tail -1)
+        [ -z "$reclaimed" ] && reclaimed="0B"
         log "Removed $stopped_count stopped containers (reclaimed: $reclaimed): $stopped_names"
     fi
 else
@@ -187,7 +190,8 @@ if [ "$unused_vols" -gt 0 ]; then
         log "[DRY-RUN] Would remove $unused_vols unused volumes"
     else
         output=$(docker volume prune -f 2>/dev/null)
-        reclaimed=$(echo "$output" | grep -oP 'Total reclaimed space: \K.*' || echo "0B")
+        reclaimed=$(echo "$output" | sed -n 's/.*Total reclaimed space: //p' | tail -1)
+        [ -z "$reclaimed" ] && reclaimed="0B"
         log "Removed $unused_vols unused volumes (reclaimed: $reclaimed)"
     fi
 else
@@ -198,12 +202,12 @@ fi
 log ""
 log "--- Journal Logs ---"
 if command -v journalctl &>/dev/null; then
-    journal_size=$(journalctl --disk-usage 2>/dev/null | grep -oP '[\d.]+[KMGT]' || echo "unknown")
+    journal_size=$(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGT]' || echo "unknown")
     if [ "$DRY_RUN" = true ]; then
         log "[DRY-RUN] Would vacuum journal logs older than 3 days (current size: $journal_size)"
     else
         sudo journalctl --vacuum-time=3d &>/dev/null
-        journal_size_after=$(journalctl --disk-usage 2>/dev/null | grep -oP '[\d.]+[KMGT]' || echo "unknown")
+        journal_size_after=$(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGT]' || echo "unknown")
         log "Journal logs vacuumed to 3 days (${journal_size} -> ${journal_size_after})"
     fi
 else
