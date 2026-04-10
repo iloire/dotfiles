@@ -102,8 +102,6 @@ $DF_CMD -H | grep -vE '^Filesystem|tmpfs|cdrom' | awk '{ print $5 " " $1 }' | wh
 		else
 			error "Failed to send alert email"
 		fi
-		WATCHDOG_METADATA="{\"machine\":\"$hostname_value\",\"partition\":\"$partition\",\"usage_pct\":$usep}" \
-		WATCHDOG_NOTIFY=true $HOME/dotfiles/bin/send-watchdog "disk" "disk.space.warning" "error" "Partition $partition at $usep%"
 	fi
 done
 
