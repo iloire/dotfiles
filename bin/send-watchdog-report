@@ -287,12 +287,105 @@ else
 fi
 info "System: $SYSTEM_JSON"
 
+# --- Temperature ---
+# Reads /sys/class/hwmon/*/tempN_input (millidegrees C) on Linux.
+# Falls back to osx-cpu-temp on macOS if present. Skips empty sensors.
+# Emits cpu_c (coretemp Package id 0 if available), max_c across all readings,
+# and a zones array. Returns nothing if no usable sensors exist.
+collect_temperature() {
+    local zones cpu_c max_c
+
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if command -v osx-cpu-temp >/dev/null 2>&1; then
+            local val
+            val=$(osx-cpu-temp 2>/dev/null | awk '{gsub(/°C/,""); v=$1+0; if (v>0) printf "%.1f", v}')
+            if [ -n "$val" ]; then
+                printf '{"cpu_c":%s,"max_c":%s,"zones":[{"name":"cpu","value_c":%s}]}' \
+                    "$val" "$val" "$val"
+            fi
+        fi
+        return
+    fi
+
+    zones=""
+    cpu_c=""
+    max_c=""
+
+    for h in /sys/class/hwmon/hwmon*; do
+        [ -d "$h" ] || continue
+        local hname
+        hname=$(cat "$h/name" 2>/dev/null)
+        [ -z "$hname" ] && hname="hwmon"
+        for tf in "$h"/temp*_input; do
+            [ -f "$tf" ] || continue
+            local raw val idx label fullname
+            raw=$(cat "$tf" 2>/dev/null)
+            [ -z "$raw" ] && continue
+            [ "$raw" = "0" ] && continue
+            val=$(awk "BEGIN {printf \"%.1f\", $raw/1000}")
+            idx=$(basename "$tf" | sed 's/temp\([0-9]*\)_input/\1/')
+            label=$(cat "$h/temp${idx}_label" 2>/dev/null)
+            if [ -n "$label" ]; then
+                fullname="$hname/$label"
+            else
+                fullname="$hname/temp$idx"
+            fi
+            # Escape backslashes and quotes for JSON
+            fullname=${fullname//\\/\\\\}
+            fullname=${fullname//\"/\\\"}
+            zones="${zones}{\"name\":\"$fullname\",\"value_c\":$val},"
+            if [ -z "$cpu_c" ] && [ "$hname" = "coretemp" ] && [ "$label" = "Package id 0" ]; then
+                cpu_c="$val"
+            fi
+            if [ -z "$max_c" ]; then
+                max_c="$val"
+            else
+                max_c=$(awk "BEGIN {print ($val > $max_c) ? $val : $max_c}")
+            fi
+        done
+    done
+
+    # Fallback: /sys/class/thermal if hwmon produced nothing
+    if [ -z "$zones" ]; then
+        for z in /sys/class/thermal/thermal_zone*; do
+            [ -d "$z" ] || continue
+            local t raw val
+            t=$(cat "$z/type" 2>/dev/null)
+            raw=$(cat "$z/temp" 2>/dev/null)
+            [ -z "$raw" ] && continue
+            [ "$raw" = "0" ] && continue
+            val=$(awk "BEGIN {printf \"%.1f\", $raw/1000}")
+            zones="${zones}{\"name\":\"${t:-zone}\",\"value_c\":$val},"
+            if [ -z "$cpu_c" ] && [ "$t" = "x86_pkg_temp" ]; then
+                cpu_c="$val"
+            fi
+            if [ -z "$max_c" ]; then
+                max_c="$val"
+            else
+                max_c=$(awk "BEGIN {print ($val > $max_c) ? $val : $max_c}")
+            fi
+        done
+    fi
+
+    [ -z "$zones" ] && return
+
+    zones=${zones%,}
+    local result="{"
+    [ -n "$cpu_c" ] && result="${result}\"cpu_c\":$cpu_c,"
+    result="${result}\"max_c\":$max_c,\"zones\":[$zones]}"
+    printf '%s' "$result"
+}
+
+TEMPERATURE_JSON=$(collect_temperature)
+info "Temperature: $TEMPERATURE_JSON"
+
 # --- Build custom block ---
 CUSTOM_PARTS=()
-[ -n "$PROCESSES_JSON" ] && CUSTOM_PARTS+=("\"processes\":$PROCESSES_JSON")
-[ -n "$TOP_CPU_JSON" ]   && CUSTOM_PARTS+=("\"top_cpu\":[$TOP_CPU_JSON]")
-[ -n "$TOP_MEM_JSON" ]   && CUSTOM_PARTS+=("\"top_mem\":[$TOP_MEM_JSON]")
-[ -n "$SYSTEM_JSON" ]    && CUSTOM_PARTS+=("\"system\":$SYSTEM_JSON")
+[ -n "$PROCESSES_JSON" ]   && CUSTOM_PARTS+=("\"processes\":$PROCESSES_JSON")
+[ -n "$TOP_CPU_JSON" ]     && CUSTOM_PARTS+=("\"top_cpu\":[$TOP_CPU_JSON]")
+[ -n "$TOP_MEM_JSON" ]     && CUSTOM_PARTS+=("\"top_mem\":[$TOP_MEM_JSON]")
+[ -n "$SYSTEM_JSON" ]      && CUSTOM_PARTS+=("\"system\":$SYSTEM_JSON")
+[ -n "$TEMPERATURE_JSON" ] && CUSTOM_PARTS+=("\"temperature\":$TEMPERATURE_JSON")
 
 CUSTOM_JSON=""
 if [ ${#CUSTOM_PARTS[@]} -gt 0 ]; then
