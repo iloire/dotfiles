@@ -65,10 +65,12 @@ collect_disk() {
             printf "{\"mount\":\"%s\",\"total\":%s,\"used\":%s,\"percent\":%d},", $9, total, used, pct
         }'
     else
-        /bin/df -B1 --output=target,size,used,pcent | tail -n +2 | grep -vE 'tmpfs|devtmpfs|udev|snap' | awk '{
-            pct=$4+0; gsub(/%/,"",pct);
-            printf "{\"mount\":\"%s\",\"total\":%s,\"used\":%s,\"percent\":%d},", $1, $2, $3, pct
-        }'
+        /bin/df -B1 --output=target,size,used,pcent \
+            -x tmpfs -x devtmpfs -x overlay -x squashfs -x nsfs -x fuse.snapfuse \
+            | tail -n +2 | awk '{
+                pct=$4+0; gsub(/%/,"",pct);
+                printf "{\"mount\":\"%s\",\"total\":%s,\"used\":%s,\"percent\":%d},", $1, $2, $3, pct
+            }'
     fi
 }
 
