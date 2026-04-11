@@ -172,7 +172,7 @@ if [ "$stopped_count" -gt 0 ]; then
     if [ "$DRY_RUN" = true ]; then
         log "[DRY-RUN] Would remove $stopped_count stopped containers: $stopped_names"
     else
-        output=$(docker container prune -f 2>/dev/null)
+        output=$(docker container prune -f --filter "until=24h" 2>/dev/null)
         reclaimed=$(echo "$output" | sed -n 's/.*Total reclaimed space: //p' | tail -1)
         [ -z "$reclaimed" ] && reclaimed="0B"
         log "Removed $stopped_count stopped containers (reclaimed: $reclaimed): $stopped_names"
