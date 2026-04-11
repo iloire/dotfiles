@@ -170,8 +170,17 @@ SERVICES_JSON=$(collect_services)
 info "Services: [$SERVICES_JSON]"
 
 # --- Processes (state counts) ---
+# Sets PROC_TOTAL, PROC_RUNNING, PROC_SLEEPING, PROC_STOPPED, PROC_ZOMBIE
+# so we can build both the top-level `processes` object (total/zombie for
+# threshold alerts) and the richer breakdown inside `custom.processes`.
 collect_processes() {
-    local states total running sleeping stopped zombie
+    local states
+    PROC_TOTAL=""
+    PROC_RUNNING=""
+    PROC_SLEEPING=""
+    PROC_STOPPED=""
+    PROC_ZOMBIE=""
+
     if [[ "$OSTYPE" == "darwin"* ]]; then
         states=$(ps -Ao state= 2>/dev/null)
     else
@@ -180,18 +189,24 @@ collect_processes() {
 
     [ -z "$states" ] && return
 
-    total=$(printf '%s\n' "$states" | wc -l | awk '{print $1}')
-    running=$(printf '%s\n' "$states" | grep -c '^R' || true)
-    sleeping=$(printf '%s\n' "$states" | grep -cE '^[SD]' || true)
-    stopped=$(printf '%s\n' "$states" | grep -c '^T' || true)
-    zombie=$(printf '%s\n' "$states" | grep -c '^Z' || true)
-
-    printf '{"total":%d,"running":%d,"sleeping":%d,"stopped":%d,"zombie":%d}' \
-        "$total" "$running" "$sleeping" "$stopped" "$zombie"
+    PROC_TOTAL=$(printf '%s\n' "$states" | wc -l | awk '{print $1}')
+    PROC_RUNNING=$(printf '%s\n' "$states" | grep -c '^R' || true)
+    PROC_SLEEPING=$(printf '%s\n' "$states" | grep -cE '^[SD]' || true)
+    PROC_STOPPED=$(printf '%s\n' "$states" | grep -c '^T' || true)
+    PROC_ZOMBIE=$(printf '%s\n' "$states" | grep -c '^Z' || true)
 }
 
-PROCESSES_JSON=$(collect_processes)
+collect_processes
+
+PROCESSES_JSON=""
+PROCESSES_DETAIL_JSON=""
+if [ -n "$PROC_TOTAL" ]; then
+    PROCESSES_JSON=$(printf '{"total":%d,"zombie":%d}' "$PROC_TOTAL" "$PROC_ZOMBIE")
+    PROCESSES_DETAIL_JSON=$(printf '{"total":%d,"running":%d,"sleeping":%d,"stopped":%d,"zombie":%d}' \
+        "$PROC_TOTAL" "$PROC_RUNNING" "$PROC_SLEEPING" "$PROC_STOPPED" "$PROC_ZOMBIE")
+fi
 info "Processes: $PROCESSES_JSON"
+info "Processes (detail): $PROCESSES_DETAIL_JSON"
 
 # --- Top processes (by CPU and memory) ---
 # Parses "pid pcpu pmem comm..." lines into JSON objects.
@@ -381,7 +396,7 @@ info "Temperature: $TEMPERATURE_JSON"
 
 # --- Build custom block ---
 CUSTOM_PARTS=()
-[ -n "$PROCESSES_JSON" ]   && CUSTOM_PARTS+=("\"processes\":$PROCESSES_JSON")
+[ -n "$PROCESSES_DETAIL_JSON" ] && CUSTOM_PARTS+=("\"processes\":$PROCESSES_DETAIL_JSON")
 [ -n "$TOP_CPU_JSON" ]     && CUSTOM_PARTS+=("\"top_cpu\":[$TOP_CPU_JSON]")
 [ -n "$TOP_MEM_JSON" ]     && CUSTOM_PARTS+=("\"top_mem\":[$TOP_MEM_JSON]")
 [ -n "$SYSTEM_JSON" ]      && CUSTOM_PARTS+=("\"system\":$SYSTEM_JSON")
@@ -400,6 +415,10 @@ PAYLOAD="$PAYLOAD,\"cpu\":$CPU_JSON"
 
 if [ -n "$SERVICES_JSON" ]; then
     PAYLOAD="$PAYLOAD,\"services\":[$SERVICES_JSON]"
+fi
+
+if [ -n "$PROCESSES_JSON" ]; then
+    PAYLOAD="$PAYLOAD,\"processes\":$PROCESSES_JSON"
 fi
 
 if [ -n "$CUSTOM_JSON" ]; then
