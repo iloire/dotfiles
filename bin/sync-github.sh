@@ -34,11 +34,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Check for internet connectivity (exit silently to avoid cron mail spam)
-if ! ping -c 1 -W 3 github.com >/dev/null 2>&1; then
-    exit 0
-fi
-
 # Add timestamp to log messages
 log_message() {
     local MESSAGE="$1"
@@ -58,6 +53,18 @@ error_message() {
     echo "$LOG_ENTRY" >> "$LOG_FILE"
     echo "ERROR: $MESSAGE" >&2
 }
+
+# Check for internet connectivity (exit silently to avoid cron mail spam)
+if ! ping -c 1 -W 3 github.com >/dev/null 2>&1; then
+    log_message "No internet connectivity (ping failed) — skipping sync"
+    exit 0
+fi
+
+# Verify SSH access to GitHub
+if ! ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+    log_message "GitHub SSH auth failed — skipping sync"
+    exit 0
+fi
 
 # Function to load config from a file in the directory (optional override)
 load_local_config() {
@@ -84,11 +91,11 @@ load_local_config() {
         done < "$CONFIG_FILE"
         
         if [ -n "$REPO_URL" ] && [ -n "$BRANCH" ]; then
-            log_message "Successfully loaded local config for $DIR"
+            log_message "Successfully loaded local config for $DIR" >&2
             echo "$REPO_URL||$BRANCH"
             return 0
         else
-            error_message "Invalid or incomplete local config in $CONFIG_FILE"
+            error_message "Invalid or incomplete local config in $CONFIG_FILE" >&2
             return 1
         fi
     fi
@@ -169,27 +176,46 @@ sync_directory() {
         log_message "Repository setup completed successfully"
     fi
 
+    # Skip if the repo is on a different branch (likely intentional work)
+    local CURRENT_BRANCH
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+        log_message "Skipping $DIR: on branch '$CURRENT_BRANCH', expected '$BRANCH'"
+        return 0
+    fi
+
     # Pull latest changes from GitHub (retry up to 3 times for transient failures)
     local PULL_SUCCESS=false
+    local PULL_OUTPUT
     for attempt in 1 2 3; do
         log_message "Pulling latest changes from $REPO_URL (attempt $attempt/3)..."
+        PULL_OUTPUT=$(git pull origin "$BRANCH" 2>&1)
+        local PULL_EXIT=$?
+
+        echo "$PULL_OUTPUT" >> "$LOG_FILE"
         if [ "$VERBOSE" = true ]; then
-            git pull origin "$BRANCH" 2>&1 | tee -a "$LOG_FILE"
-        else
-            git pull origin "$BRANCH" >> "$LOG_FILE" 2>&1
+            echo "$PULL_OUTPUT"
         fi
-        if [ $? -eq 0 ]; then
+
+        if [ $PULL_EXIT -eq 0 ]; then
             log_message "Successfully pulled latest changes"
             PULL_SUCCESS=true
             break
         fi
+
+        # Don't retry non-transient errors
+        if echo "$PULL_OUTPUT" | grep -qE "Not possible to fast-forward|CONFLICT|diverging|stash failed|not a git repository|does not have a commit checked out"; then
+            error_message "Pull failed in $DIR (non-transient): $(echo "$PULL_OUTPUT" | grep -E 'fatal:|error:|CONFLICT|Not possible' | head -3)"
+            return 1
+        fi
+
         if [ $attempt -lt 3 ]; then
-            log_message "Pull failed, retrying in 5 seconds..."
+            log_message "Pull failed (transient?), retrying in 5 seconds..."
             sleep 5
         fi
     done
     if [ "$PULL_SUCCESS" = false ]; then
-        error_message "Failed to pull $BRANCH from $REPO_URL (in $DIR) after 3 attempts"
+        error_message "Failed to pull $BRANCH from $REPO_URL (in $DIR) after 3 attempts. Last output: $(echo "$PULL_OUTPUT" | grep -E 'fatal:|error:' | head -3)"
         return 1
     fi
 
