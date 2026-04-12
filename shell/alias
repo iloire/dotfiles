@@ -17,9 +17,19 @@ alias gap='git commit --amend --no-edit; git push -f origin HEAD --no-verify'
 alias gp='git push origin HEAD && git push --tags'
 alias gcontrib='git shortlog -s -n'
 
+# Modern CLI replacements (fall back to classic if not installed)
+command -v eza   &>/dev/null && alias ls='eza --icons --group-directories-first' && alias la='eza -la --icons --group-directories-first' && alias lt='eza --tree --icons --level=2'
+command -v bat   &>/dev/null && alias cat='bat --paging=never' && alias catp='bat'
+command -v fd    &>/dev/null && alias find='fd'
+command -v dust  &>/dev/null && alias du='dust'
+command -v btop  &>/dev/null && alias top='btop'
+command -v delta &>/dev/null && alias diff='delta'
+
 # ls
-alias l="ls -lF ${colorflag}"
-alias la='ls -la'
+if ! command -v eza &>/dev/null; then
+  alias l="ls -lF ${colorflag}"
+  alias la='ls -la'
+fi
 alias dun='list-space' # easier to type
 
 # cd
