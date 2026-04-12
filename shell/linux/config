@@ -5,7 +5,9 @@ export NVM_DIR="$HOME/.nvm"
 
 export XDG_DATA_DIRS="$HOME/dotfiles/xdg:$XDG_DATA_DIRS"
 
-command -v setxkbmap >/dev/null && setxkbmap -option caps:escape
+if [ -n "$DISPLAY" ] && command -v setxkbmap >/dev/null; then
+  setxkbmap -option caps:escape
+fi
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!

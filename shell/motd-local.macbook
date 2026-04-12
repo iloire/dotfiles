@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# motd-local — guanche (macOS dev workstation) extensions
+# Symlink to ~/dotfiles/shell/motd-local on guanche
+
+# Docker containers (if Docker Desktop is running)
+if docker info >/dev/null 2>&1; then
+  running=$(docker ps -q 2>/dev/null | wc -l | tr -d ' ')
+  if (( running > 0 )); then
+    printf "  ${CYAN}Docker:${RESET}  %s containers running\n" "$running"
+  fi
+fi

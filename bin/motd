@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+#
+# motd — login banner with system stats and alerts
+# Called from /etc/profile.d/motd.sh (Linux) or ~/.zprofile (macOS)
+# Extend per-host via ~/dotfiles/shell/motd-local
+#
+
+set -euo pipefail
+
+# Colors
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+# ── Hostname banner ──────────────────────────────────────────────
+if command -v figlet >/dev/null 2>&1; then
+  echo ""
+  figlet -f small "$(hostname -s)" 2>/dev/null || echo -e "${BOLD}$(hostname -s)${RESET}"
+else
+  echo -e "\n${BOLD}$(hostname -s)${RESET}"
+fi
+echo -e "${DIM}$(date '+%A %d %B %Y, %H:%M')${RESET}"
+echo ""
+
+# ── System stats ─────────────────────────────────────────────────
+os="$(uname -s)"
+
+# Uptime (portable)
+if [[ "$os" == "Darwin" ]]; then
+  boot=$(sysctl -n kern.boottime | awk '{print $4}' | tr -d ',')
+  now=$(date +%s)
+  uptime_secs=$(( now - boot ))
+  uptime_days=$(( uptime_secs / 86400 ))
+  uptime_hours=$(( (uptime_secs % 86400) / 3600 ))
+  uptime_str="${uptime_days}d ${uptime_hours}h"
+else
+  uptime_str=$(uptime -p 2>/dev/null | sed 's/^up //' || uptime | awk -F'up ' '{print $2}' | awk -F',' '{print $1}')
+fi
+
+# Load average
+if [[ -r /proc/loadavg ]]; then
+  read -r load1 load5 load15 _ < /proc/loadavg
+else
+  load_raw=$(sysctl -n vm.loadavg 2>/dev/null | tr -d '{}')
+  load1=$(echo "$load_raw" | awk '{print $1}')
+  load5=$(echo "$load_raw" | awk '{print $2}')
+  load15=$(echo "$load_raw" | awk '{print $3}')
+fi
+ncpu=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1)
+load_warn=""
+if awk "BEGIN {exit !($load1 > $ncpu * 0.8)}" 2>/dev/null; then
+  load_warn="${YELLOW} !${RESET}"
+fi
+
+# Memory
+if [[ "$os" == "Darwin" ]]; then
+  mem_total_kb=$(sysctl -n hw.memsize 2>/dev/null | awk '{printf "%.0f", $1/1024}')
+  # vm_stat pages * page_size
+  page_size=$(vm_stat | head -1 | grep -o '[0-9]*')
+  mem_used_pages=$(vm_stat | awk '/Pages active/ {gsub(/\./,"",$3); print $3}')
+  mem_used_kb=$(( mem_used_pages * page_size / 1024 ))
+else
+  mem_total_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+  mem_avail_kb=$(awk '/MemAvailable/ {print $2}' /proc/meminfo)
+  mem_used_kb=$(( mem_total_kb - mem_avail_kb ))
+fi
+mem_pct=$(( mem_used_kb * 100 / mem_total_kb ))
+mem_used_h=$(awk "BEGIN {printf \"%.1fG\", $mem_used_kb/1048576}")
+mem_total_h=$(awk "BEGIN {printf \"%.1fG\", $mem_total_kb/1048576}")
+mem_color="${GREEN}"
+if (( mem_pct > 90 )); then mem_color="${RED}"
+elif (( mem_pct > 75 )); then mem_color="${YELLOW}"
+fi
+
+# Disk — root partition
+if [[ "$os" == "Darwin" ]]; then
+  disk_line=$(df -h / | tail -1)
+else
+  disk_line=$(df -h / | tail -1)
+fi
+disk_used=$(echo "$disk_line" | awk '{print $3}')
+disk_total=$(echo "$disk_line" | awk '{print $2}')
+disk_pct_raw=$(echo "$disk_line" | awk '{print $5}' | tr -d '%')
+disk_color="${GREEN}"
+if (( disk_pct_raw > 90 )); then disk_color="${RED}"
+elif (( disk_pct_raw > 85 )); then disk_color="${YELLOW}"
+fi
+
+# Print stats in two columns
+printf "  ${CYAN}Uptime:${RESET}  %-24s ${CYAN}Load:${RESET}  %s %s %s%b\n" \
+  "$uptime_str" "$load1" "$load5" "$load15" "$load_warn"
+printf "  ${CYAN}Memory:${RESET}  %b%-8s${RESET} / %-8s (%d%%)   ${CYAN}Disk /:${RESET}  %b%-5s${RESET} / %-5s (%d%%)\n" \
+  "$mem_color" "$mem_used_h" "$mem_total_h" "$mem_pct" \
+  "$disk_color" "$disk_used" "$disk_total" "$disk_pct_raw"
+
+# ── Alerts ───────────────────────────────────────────────────────
+alerts=()
+
+# Reboot required (Debian/Ubuntu)
+if [[ -f /var/run/reboot-required ]]; then
+  alerts+=("${YELLOW}Reboot required${RESET}")
+fi
+
+# Pending security updates (Debian/Ubuntu)
+if [[ -f /var/lib/update-notifier/updates-available ]]; then
+  updates=$(grep -oP '\d+ updates? can be applied' /var/lib/update-notifier/updates-available 2>/dev/null || true)
+  security=$(grep -oP '\d+ of these.* security' /var/lib/update-notifier/updates-available 2>/dev/null || true)
+  if [[ -n "$security" ]]; then
+    alerts+=("${RED}${security}${RESET}")
+  elif [[ -n "$updates" ]]; then
+    alerts+=("${YELLOW}${updates}${RESET}")
+  fi
+fi
+
+# High disk usage on any mount (Linux only)
+if [[ "$os" != "Darwin" ]]; then
+  while IFS= read -r line; do
+    mount=$(echo "$line" | awk '{print $6}')
+    pct=$(echo "$line" | awk '{print $5}' | tr -d '%')
+    if (( pct > 90 )); then
+      alerts+=("${RED}Disk ${mount} at ${pct}%${RESET}")
+    fi
+  done < <(df -h --type=ext4 --type=xfs --type=btrfs --type=zfs 2>/dev/null | tail -n+2 || true)
+fi
+
+if (( ${#alerts[@]} > 0 )); then
+  echo ""
+  for alert in "${alerts[@]}"; do
+    echo -e "  ** $alert"
+  done
+fi
+
+# ── Local extensions ─────────────────────────────────────────────
+if [[ -f "$HOME/dotfiles/shell/motd-local" ]]; then
+  echo ""
+  # shellcheck disable=SC1091
+  source "$HOME/dotfiles/shell/motd-local"
+fi
+
+echo ""
