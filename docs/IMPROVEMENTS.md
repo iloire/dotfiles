@@ -373,7 +373,6 @@ Small issues found during a code review of `shell/`. Not urgent but worth cleani
 - **`his`** (`alias his='history | grep $1'`) — aliases don't take positional args in zsh. Convert to a function: `his() { history | grep "$1"; }`
 
 ### Inefficient patterns
-- **`glist` alias** (`alias:15`) — complex loop with a useless `| cat` and awk dedup. Replace with: `git branch -a --sort=-committerdate --format='%(committerdate:relative) %(refname:short) %(authorname)'`
 - **`nvims` function** (`functions:25`) — `$(ls ~/.config | grep nvim)` is fragile. Use: `find ~/.config -maxdepth 1 -name '*nvim*' -printf '%f\n'`
 
 ---
