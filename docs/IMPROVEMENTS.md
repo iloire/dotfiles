@@ -357,6 +357,27 @@ Some logic is duplicated between ansible roles and dotfiles:
 
 ---
 
+## 13. Shell Code Quality Fixes
+
+Small issues found during a code review of `shell/`. Not urgent but worth cleaning up.
+
+### Startup performance
+- **`check-cookies-being-cleaned.py`** runs synchronously on every shell open (`zshrc:43`). If it hangs, the shell hangs. Run it async or only on login shells.
+- **`hidutil` keyboard remapping** runs on every shell open (`osx/config:12`). It's idempotent but wasteful — guard it with `[[ -o login ]]` or move to a launchd agent.
+- **NVM loading is duplicated** in `osx/config` and `linux/config`. Move to shared `config`. Consider lazy-loading (see item 4).
+
+### Duplicated functions
+- **`o()` function** is defined identically in `osx/functions` and `linux/functions` (only differs by `open` vs `xdg-open`). Consolidate into shared `functions` with an OS check, or use a variable for the opener command.
+
+### Aliases that don't work as aliases
+- **`his`** (`alias his='history | grep $1'`) — aliases don't take positional args in zsh. Convert to a function: `his() { history | grep "$1"; }`
+
+### Inefficient patterns
+- **`glist` alias** (`alias:15`) — complex loop with a useless `| cat` and awk dedup. Replace with: `git branch -a --sort=-committerdate --format='%(committerdate:relative) %(refname:short) %(authorname)'`
+- **`nvims` function** (`functions:25`) — `$(ls ~/.config | grep nvim)` is fragile. Use: `find ~/.config -maxdepth 1 -name '*nvim*' -printf '%f\n'`
+
+---
+
 ## Priority Matrix
 
 | #  | Improvement                        | Effort | Impact | Where            |
@@ -371,5 +392,6 @@ Some logic is duplicated between ansible roles and dotfiles:
 | 8  | Dotfiles install script            | Medium | Medium | dotfiles         |
 | 9  | Starship prompt                    | Medium | Medium | both             |
 | 10 | Atuin shell history                | Medium | Medium | both             |
+| 13 | Shell code quality fixes           | Low    | Low    | dotfiles         |
 | 12 | Consolidate duplicate logic        | Medium | Medium | both             |
 | 11 | Systemd timers                     | High   | Low    | both             |

@@ -16,20 +16,20 @@ export GOPATH=$HOME/code/gocode
 export HOMEBREW_NO_ANALYTICS=1
 export EDITOR=nvim
 
-source $SHELL_DIR/alias
-source $SHELL_DIR/functions
-source $SHELL_DIR/path
+source "$SHELL_DIR/alias"
+source "$SHELL_DIR/functions"
+source "$SHELL_DIR/path"
 
 # macOS or Linux
 if [[ "$(uname)" == "Darwin" ]]; then
-  source $SHELL_DIR/osx/path
-  source $SHELL_DIR/osx/alias
-  source $SHELL_DIR/osx/functions
-  source $SHELL_DIR/osx/config
+  source "$SHELL_DIR/osx/path"
+  source "$SHELL_DIR/osx/alias"
+  source "$SHELL_DIR/osx/functions"
+  source "$SHELL_DIR/osx/config"
 else
-  source $SHELL_DIR/linux/path
-  source $SHELL_DIR/linux/alias
-  source $SHELL_DIR/linux/functions
-  source $SHELL_DIR/linux/config
+  source "$SHELL_DIR/linux/path"
+  source "$SHELL_DIR/linux/alias"
+  source "$SHELL_DIR/linux/functions"
+  source "$SHELL_DIR/linux/config"
 fi
 

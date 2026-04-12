@@ -1,10 +1,5 @@
 ZSH=$HOME/.oh-my-zsh
 
-# Liquid prompt
-# https://github.com/nojhan/liquidprompt
-# Only load Liquid Prompt in interactive shells, not from a script or from scp
-#[[ $- = *i* ]] && source ~/code/liquidprompt/liquidprompt
-
 ZSH_THEME="sonicradish"
 
 # Comment this out to disable bi-weekly auto-update checks
@@ -26,7 +21,7 @@ export SHELL_DIR=~/dotfiles/shell
 
 LOCAL_OVERRIDES=$SHELL_DIR/local-overrides
 if test -f "$LOCAL_OVERRIDES"; then
-  source $LOCAL_OVERRIDES
+  source "$LOCAL_OVERRIDES"
 fi
 
 if [[ -d /opt/homebrew/opt/fzf ]]; then
@@ -36,9 +31,9 @@ elif [[ -d /usr/local/opt/fzf ]]; then
 elif [[ -d /usr/share/doc/fzf ]]; then
   export FZF_BASE=/usr/share/doc/fzf
 fi
-source $ZSH/oh-my-zsh.sh
+source "$ZSH/oh-my-zsh.sh"
 
-source $SHELL_DIR/config
+source "$SHELL_DIR/config"
 
 ~/dotfiles/bin/check-cookies-being-cleaned.py
 

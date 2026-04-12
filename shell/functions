@@ -29,5 +29,5 @@ nvims() {
 	elif [[ $config == "nvim" ]]; then
 		config=""
 	fi
-	NVIM_APPNAME=$config nvim $@
+	NVIM_APPNAME=$config nvim "$@"
 }
