@@ -1,0 +1,100 @@
+#!/bin/bash
+# Category: system
+# Description: Check external disk health and report to Devil Watchdog
+# Usage: check-external-disk
+#
+# Checks real disk health metrics:
+#   1. Is the disk mounted?
+#   2. SMART overall health assessment
+#   3. Key SMART attributes (reallocated sectors, pending sectors, uncorrectable errors)
+#   4. Filesystem error count via tune2fs
+#   5. Disk usage
+#
+# Requires: WATCHDOG_API_KEY in environment, sudo access for smartctl/tune2fs
+
+DEVICE="/dev/sda"
+PARTITION="${DEVICE}1"
+MOUNT_POINT="/mnt/external-disk1"
+CHANNEL="disk"
+EVENT_OK="external-disk.check"
+EVENT_FAIL="external-disk.fail"
+USAGE_WARN_THRESHOLD=85
+
+send() {
+    local name="$1" severity="$2" description="$3" icon="$4"
+    WATCHDOG_ICON="$icon" WATCHDOG_NOTIFY="${5:-false}" \
+        "$HOME/dotfiles/bin/send-watchdog" "$CHANNEL" "$name" "$severity" "$description"
+}
+
+# Check 1: is it mounted?
+if ! mountpoint -q "$MOUNT_POINT" 2>/dev/null; then
+    send "$EVENT_FAIL" "critical" "$MOUNT_POINT is not mounted — disk may have disconnected" "🔴" "true"
+    exit 0
+fi
+
+# Check 2: SMART health
+SMART=$(sudo smartctl -H -A "$DEVICE" 2>&1)
+SMART_EXIT=$?
+
+# smartctl exit bit 0 = command failed, bit 1 = device open failed
+if [ $((SMART_EXIT & 3)) -ne 0 ]; then
+    # SMART not supported (common for USB enclosures) — fall back to tune2fs only
+    SMART_AVAILABLE=false
+else
+    SMART_AVAILABLE=true
+
+    # Overall SMART health verdict
+    SMART_HEALTH=$(echo "$SMART" | awk '/SMART overall-health/ {print $NF}')
+    if [ "$SMART_HEALTH" != "PASSED" ]; then
+        send "$EVENT_FAIL" "critical" "$DEVICE SMART health: $SMART_HEALTH" "🔴" "true"
+        exit 0
+    fi
+
+    # Key SMART attributes (ID 5, 197, 198)
+    REALLOCATED=$(echo "$SMART" | awk '/Reallocated_Sector/ {print $10}')
+    PENDING=$(echo "$SMART" | awk '/Current_Pending_Sector/ {print $10}')
+    UNCORRECTABLE=$(echo "$SMART" | awk '/Offline_Uncorrectable/ {print $10}')
+
+    BAD_ATTRS=""
+    [ "${REALLOCATED:-0}" -gt 0 ] 2>/dev/null && BAD_ATTRS="${BAD_ATTRS}reallocated=${REALLOCATED} "
+    [ "${PENDING:-0}" -gt 0 ] 2>/dev/null && BAD_ATTRS="${BAD_ATTRS}pending=${PENDING} "
+    [ "${UNCORRECTABLE:-0}" -gt 0 ] 2>/dev/null && BAD_ATTRS="${BAD_ATTRS}uncorrectable=${UNCORRECTABLE} "
+
+    if [ -n "$BAD_ATTRS" ]; then
+        send "$EVENT_FAIL" "warning" "$DEVICE SMART concern: ${BAD_ATTRS}" "⚠️" "true"
+        exit 0
+    fi
+fi
+
+# Check 3: filesystem errors via tune2fs
+TUNE2FS=$(sudo tune2fs -l "$PARTITION" 2>&1)
+if [ $? -eq 0 ]; then
+    FS_ERRORS=$(echo "$TUNE2FS" | awk -F: '/^Filesystem error count/ {gsub(/ /,"",$2); print $2}')
+    FS_STATE=$(echo "$TUNE2FS" | awk -F: '/^Filesystem state/ {sub(/^ +/,"",$2); print $2}')
+    LAST_CHECKED=$(echo "$TUNE2FS" | awk -F: '/^Last checked/ {sub(/^ +/,"",$2); print $2}')
+
+    if [ "${FS_ERRORS:-0}" -gt 0 ] 2>/dev/null; then
+        send "$EVENT_FAIL" "critical" "$PARTITION has $FS_ERRORS filesystem error(s) — last fsck: $LAST_CHECKED" "🔴" "true"
+        exit 0
+    fi
+
+    if [ "$FS_STATE" != "clean" ]; then
+        send "$EVENT_FAIL" "warning" "$PARTITION filesystem state: $FS_STATE" "⚠️" "true"
+        exit 0
+    fi
+fi
+
+# Check 4: disk usage
+USAGE=$(df "$MOUNT_POINT" | awk 'NR==2 {gsub(/%/,""); print $5}')
+AVAIL=$(df -h "$MOUNT_POINT" | awk 'NR==2 {print $4}')
+
+if [ "$USAGE" -ge "$USAGE_WARN_THRESHOLD" ] 2>/dev/null; then
+    send "$EVENT_FAIL" "warning" "$MOUNT_POINT at ${USAGE}% (${AVAIL} free)" "⚠️" "true"
+    exit 0
+fi
+
+# All good — heartbeat with summary
+SUMMARY="${USAGE}% used (${AVAIL} free)"
+[ "$SMART_AVAILABLE" = true ] && SUMMARY="SMART ok, $SUMMARY"
+[ -n "$LAST_CHECKED" ] && SUMMARY="$SUMMARY, fsck: $LAST_CHECKED"
+send "$EVENT_OK" "info" "$DEVICE: $SUMMARY"
