@@ -42,6 +42,11 @@ source $SHELL_DIR/config
 
 ~/dotfiles/bin/check-cookies-being-cleaned.py
 
+# Login banner (SSH / first login only)
+if [[ -o login ]] && [ -x "$HOME/dotfiles/bin/motd" ]; then
+  "$HOME/dotfiles/bin/motd"
+fi
+
 # Warn about failed GitHub syncs
 if [[ -s "$HOME/sync_failures.txt" ]]; then
   echo "\033[33m⚠ GitHub sync failed for:\033[0m"
