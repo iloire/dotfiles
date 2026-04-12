@@ -362,7 +362,7 @@ Some logic is duplicated between ansible roles and dotfiles:
 Small issues found during a code review of `shell/`. Not urgent but worth cleaning up.
 
 ### Startup performance
-- **`check-cookies-being-cleaned.py`** runs synchronously on every shell open (`zshrc:43`). If it hangs, the shell hangs. Run it async or only on login shells.
+- ~~**`check-cookies-being-cleaned.py`** runs synchronously on every shell open (`zshrc:43`). If it hangs, the shell hangs. Run it async or only on login shells.~~ ✅ Guarded with `[[ -o login ]]`.
 - **`hidutil` keyboard remapping** runs on every shell open (`osx/config:12`). It's idempotent but wasteful — guard it with `[[ -o login ]]` or move to a launchd agent.
 - **NVM loading is duplicated** in `osx/config` and `linux/config`. Move to shared `config`. Consider lazy-loading (see item 4).
 

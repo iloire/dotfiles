@@ -35,9 +35,11 @@ source "$ZSH/oh-my-zsh.sh"
 
 source "$SHELL_DIR/config"
 
-~/dotfiles/bin/check-cookies-being-cleaned.py
+# Login-time checks (skip for subshells)
+if [[ -o login ]]; then
+  ~/dotfiles/bin/check-cookies-being-cleaned.py
+fi
 
-# Login banner (SSH / first login only)
 if [[ -o login ]] && [ -x "$HOME/dotfiles/bin/motd" ]; then
   "$HOME/dotfiles/bin/motd"
 fi
