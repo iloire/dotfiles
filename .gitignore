@@ -2,6 +2,8 @@
 .idea/
 *.swp
 shell/local-overrides
+shell/motd-local
+bin/package-lock.json
 xdg/applications/mimeinfo.cache
 .claude/
 settings.local.json
