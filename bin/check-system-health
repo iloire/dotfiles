@@ -1,0 +1,110 @@
+#!/bin/bash
+# Category: system
+# Description: Scan kernel logs and docker state for concerning events, report to Devil Watchdog
+# Usage: check-system-health
+#
+# Scans the last hour of journal output for signatures that aren't captured by
+# send-watchdog-report's metrics (which covers OOM counts, failed units, temp, etc.):
+#   1. Filesystem errors (ext4, xfs, btrfs remount-ro, buffer I/O errors)
+#   2. Block-layer errors (nvme, ata/SATA, SCSI, "I/O error" on sd*)
+#   3. Hardware errors (machine check exceptions)
+#   4. Docker containers in unhealthy state or restart loops
+#
+# Sends a single watchdog event per run: critical if any fatal signature is found,
+# warning for container issues only, info heartbeat otherwise.
+#
+# Requires: WATCHDOG_API_KEY in environment.
+
+CHANNEL="system"
+EVENT_OK="system.health.check"
+EVENT_FAIL="system.health.fail"
+SCAN_WINDOW="1 hour ago"
+RESTART_THRESHOLD=3
+
+send() {
+    local name="$1" severity="$2" description="$3" icon="$4" notify="${5:-false}"
+    WATCHDOG_ICON="$icon" WATCHDOG_NOTIFY="$notify" \
+        "$HOME/dotfiles/bin/send-watchdog" "$CHANNEL" "$name" "$severity" "$description"
+}
+
+# Returns matching lines from the journal for the scan window, case-insensitive.
+scan_journal() {
+    local pattern="$1"
+    journalctl -k --since "$SCAN_WINDOW" --no-pager 2>/dev/null \
+        | grep -iE "$pattern" | head -5
+}
+
+critical_findings=""
+warning_findings=""
+
+# --- 1. Filesystem errors ---
+fs_hits=$(scan_journal 'ext[234]-fs error|xfs.*corruption|btrfs.*error|remount.?ro|buffer i/o error')
+if [ -n "$fs_hits" ]; then
+    count=$(echo "$fs_hits" | wc -l)
+    sample=$(echo "$fs_hits" | head -1 | sed 's/"/\\"/g' | cut -c1-200)
+    critical_findings="${critical_findings}filesystem errors x${count} (${sample}); "
+fi
+
+# --- 2. Block-layer / disk errors ---
+disk_hits=$(scan_journal 'nvme.*error|ata[0-9]+:.*error|critical medium error|blk_update_request|end_request.*I/O error|sd [a-z]+:.*I/O error')
+if [ -n "$disk_hits" ]; then
+    count=$(echo "$disk_hits" | wc -l)
+    sample=$(echo "$disk_hits" | head -1 | sed 's/"/\\"/g' | cut -c1-200)
+    critical_findings="${critical_findings}disk/block errors x${count} (${sample}); "
+fi
+
+# --- 3. Hardware errors (MCE) ---
+hw_hits=$(scan_journal 'machine check|mce:|hardware error|thermal.*critical')
+if [ -n "$hw_hits" ]; then
+    count=$(echo "$hw_hits" | wc -l)
+    sample=$(echo "$hw_hits" | head -1 | sed 's/"/\\"/g' | cut -c1-200)
+    critical_findings="${critical_findings}hardware errors x${count} (${sample}); "
+fi
+
+# --- 4. Docker container health ---
+if command -v docker >/dev/null 2>&1; then
+    # Unhealthy containers
+    unhealthy=$(docker ps --filter health=unhealthy --format '{{.Names}}' 2>/dev/null | paste -sd,)
+    if [ -n "$unhealthy" ]; then
+        warning_findings="${warning_findings}unhealthy containers: ${unhealthy}; "
+    fi
+
+    # Currently restarting
+    restarting=$(docker ps --filter status=restarting --format '{{.Names}}' 2>/dev/null | paste -sd,)
+    if [ -n "$restarting" ]; then
+        warning_findings="${warning_findings}restarting containers: ${restarting}; "
+    fi
+
+    # Restart loops: RestartCount > threshold AND started within scan window
+    loopers=""
+    while read -r name count started; do
+        [ -z "$name" ] && continue
+        [ "${count:-0}" -gt "$RESTART_THRESHOLD" ] 2>/dev/null || continue
+        # started is ISO8601; compare to 1h ago
+        started_epoch=$(date -d "$started" +%s 2>/dev/null) || continue
+        cutoff=$(date -d "$SCAN_WINDOW" +%s 2>/dev/null) || continue
+        if [ "$started_epoch" -gt "$cutoff" ]; then
+            loopers="${loopers}${name}(${count}),"
+        fi
+    done < <(docker ps -a --format '{{.Names}}' 2>/dev/null | while read -r n; do
+        docker inspect "$n" --format '{{.Name}} {{.RestartCount}} {{.State.StartedAt}}' 2>/dev/null | sed 's|^/||'
+    done)
+    loopers=${loopers%,}
+    if [ -n "$loopers" ]; then
+        warning_findings="${warning_findings}restart loops: ${loopers}; "
+    fi
+fi
+
+# --- Report ---
+if [ -n "$critical_findings" ]; then
+    send "$EVENT_FAIL" "critical" "${critical_findings}${warning_findings}" "🔴" "true"
+    exit 0
+fi
+
+if [ -n "$warning_findings" ]; then
+    send "$EVENT_FAIL" "warning" "$warning_findings" "⚠️" "true"
+    exit 0
+fi
+
+send "$EVENT_OK" "info" "no kernel errors, all containers healthy"
+exit 0
