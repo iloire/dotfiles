@@ -9,6 +9,8 @@
 # Options (via environment variables):
 #   WATCHDOG_API_KEY       - Required. API key (dw_...) from your project dashboard.
 #   WATCHDOG_SERVICES      - Optional. Comma-separated systemd services to monitor (e.g. "nginx,postgres,docker").
+#   WATCHDOG_HOSTNAME      - Optional. Pins the reported hostname. When unset, uses `hostname -s`
+#                            (short form) so macOS hosts do not drift between `*.local` and `*.ts.net`.
 #
 # Options (via flags):
 #   -v, --verbose          Enable verbose output
@@ -53,7 +55,10 @@ if [ -z "$WATCHDOG_API_KEY" ]; then
     exit 0
 fi
 
-HOSTNAME=$(hostname | sed 's/\.local$//')
+# Prefer an explicit override, then the short form (handles Tailscale FQDNs
+# like `guanche.taild02984.ts.net` and mDNS `guanche.local` consistently),
+# then fall back to stripping `.local` off `hostname` for older setups.
+HOSTNAME="${WATCHDOG_HOSTNAME:-$(hostname -s 2>/dev/null || hostname | sed 's/\.local$//')}"
 info "Collecting metrics for $HOSTNAME..."
 
 # --- Disk ---
