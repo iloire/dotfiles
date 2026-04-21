@@ -32,7 +32,7 @@
 ## Preferred Stack
 - **Vercel** + **Next.js** when they make sense for the project (web apps, marketing sites, APIs)
 - **Supabase** for backend services (auth, database, storage)
-- **Turso** (libSQL) for small projects — lightweight and fast
+- **Turso** (libSQL) for small projects — lightweight and fast. Use `iloire@gmail.com` account for free databases (happy with it so far)
 - **Redis** (Upstash) for caching, rate limiting, queues — pairs well with Vercel
 
 ## Deployment & Versioning
