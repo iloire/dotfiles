@@ -96,8 +96,9 @@ open_workspace() {
     local name="$1"
     bump_count "$name"
     local ws_file="$WORKSPACES_DIR/$name.code-workspace"
-    local tmp_ws
-    tmp_ws="$(mktemp /tmp/vscode-workspace-XXXXXX).code-workspace"
+    local tmp_dir="/tmp/c-workspaces"
+    mkdir -p "$tmp_dir"
+    local tmp_ws="$tmp_dir/${name}.code-workspace"
     sed "s|~/|$HOME/|g" "$ws_file" > "$tmp_ws"
     code -n "$tmp_ws"
 }
