@@ -24,6 +24,12 @@
 - Never access `process.env` directly — use a validated `Env` module
 - **Next.js projects**: Use `.env.local` and `.env.prod` only (no `.env` file)
 - Env files are encrypted in the repo with **git-crypt** (key: `~/git-crypt-key`)
+- **Vercel projects**: Always add a `.vercelignore` file excluding env files so they're never copied into the build context, even when encrypted. Minimum contents:
+  ```
+  .env
+  .env.*
+  !.env.production
+  ```
 
 ## Frontend Aesthetics
 - Use the **frontend-design** skill when building UI
