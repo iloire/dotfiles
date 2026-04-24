@@ -5,41 +5,34 @@
 # Docker cleanup script for reclaiming disk space
 # Truncates container logs, prunes build cache, dangling images, and unused volumes
 # Safe to run frequently - only removes expendable data
-# Designed for crontab usage with detailed logging
+# Silent by default (suitable for cron); errors go to stderr
 #
-# Usage: docker-cleanup.sh [-v|--verbose] [-q|--quiet] [-n|--dry-run]
-#   -v, --verbose  Show all operations (default: quiet, only show summary if changes made)
-#   -q, --quiet    Suppress all output except errors
-#   -n, --dry-run  Show what would be cleaned without actually cleaning
+# Usage: docker-cleanup.sh [-v|--verbose] [-n|--dry-run]
+#   -v, --verbose  Show all operations
+#   -n, --dry-run  Show what would be cleaned without actually cleaning (implies -v)
 
 # Docker data root (override with DOCKER_DATA_ROOT env var)
 DOCKER_DATA_ROOT="${DOCKER_DATA_ROOT:-/var/lib/docker}"
 
-# Modes: 0=quiet (default), 1=verbose, 2=silent
-VERBOSITY=0
+VERBOSE=false
 DRY_RUN=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         -v|--verbose)
-            VERBOSITY=1
-            shift
-            ;;
-        -q|--quiet)
-            VERBOSITY=2
+            VERBOSE=true
             shift
             ;;
         -n|--dry-run)
             DRY_RUN=true
-            VERBOSITY=1
+            VERBOSE=true
             shift
             ;;
         -h|--help)
-            echo "Usage: $0 [-v|--verbose] [-q|--quiet] [-n|--dry-run]"
+            echo "Usage: $0 [-v|--verbose] [-n|--dry-run]"
             echo "Options:"
-            echo "  -v, --verbose    Show all operations"
-            echo "  -q, --quiet      Suppress all output except errors"
+            echo "  -v, --verbose    Show all operations (default: silent)"
             echo "  -n, --dry-run    Show what would be cleaned without cleaning"
             echo "  -h, --help       Show this help message"
             echo ""
@@ -56,13 +49,7 @@ TOTAL_BYTES_FREED=0
 
 # Logging functions
 log() {
-    if [ "$VERBOSITY" -eq 1 ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
-    fi
-}
-
-log_summary() {
-    if [ "$VERBOSITY" -ne 2 ]; then
+    if [ "$VERBOSE" = true ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
     fi
 }
@@ -220,9 +207,9 @@ log "=============================================="
 log "Docker Cleanup Summary"
 log "=============================================="
 if [ "$DRY_RUN" = true ]; then
-    log_summary "[DRY-RUN] Docker cleanup: would free at least $(format_bytes $TOTAL_BYTES_FREED) from logs alone (build cache and images not counted)"
+    log "[DRY-RUN] Docker cleanup: would free at least $(format_bytes $TOTAL_BYTES_FREED) from logs alone (build cache and images not counted)"
 else
-    log_summary "Docker cleanup completed: freed at least $(format_bytes $TOTAL_BYTES_FREED) from logs (build cache and images reclaimed separately)"
+    log "Docker cleanup completed: freed at least $(format_bytes $TOTAL_BYTES_FREED) from logs (build cache and images reclaimed separately)"
 fi
 log "=============================================="
 
