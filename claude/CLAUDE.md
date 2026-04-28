@@ -60,6 +60,11 @@
 - Specific, descriptive messages (not "implement tasks" or "update code")
 - No references to AI tools
 
+## Planning
+
+- When asked to create a plan, write it directly in the `docs/` folder (not in `.claude/plans/`)
+- After completing items from a plan or task file, update the document to mark them done — strikethrough the line and append ✅. Keeps the doc usable as a living checklist instead of drifting out of sync with reality
+
 ## Documentation
 
 - **CHANGELOG.md**: Changes in reverse-chronological order with UTC timestamps (YYYY-MM-DD HH:MM)
